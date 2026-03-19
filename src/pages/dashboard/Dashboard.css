@@ -1,0 +1,142 @@
+.dashboard-page {
+  padding: var(--gov-space-xl);
+  min-height: 100%;
+  background: var(--gov-gray-100);
+}
+
+.dashboard-header {
+  margin-bottom: 22px;
+}
+
+.dashboard-kicker {
+  @extend .page-kicker;
+}
+
+.dashboard-header h1 {
+  @extend .page-title;
+}
+
+.dashboard-subtitle {
+  margin: 10px 0 0;
+  color: #5f7386;
+}
+
+.dashboard-status {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #627588;
+  font-size: 0.88rem;
+}
+
+.dashboard-status-badge {
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(39, 106, 152, 0.1);
+  color: #276a98;
+  font-weight: 700;
+}
+
+.dashboard-alert {
+  margin-bottom: 18px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(204, 52, 64, 0.14);
+  background: rgba(255, 236, 236, 0.92);
+  color: #b52a35;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 18px;
+  margin-bottom: 20px;
+}
+
+.stat-card,
+.dashboard-panel {
+  background: rgba(255, 255, 255, 0.86);
+  border: 1px solid rgba(39, 106, 152, 0.12);
+  border-radius: 22px;
+  box-shadow: 0 18px 45px rgba(22, 55, 85, 0.08);
+}
+
+.stat-card {
+  padding: 22px;
+}
+
+.stat-card h3 {
+  margin: 0 0 10px;
+  color: #4d667d;
+  font-size: 0.95rem;
+}
+
+.stat-card span {
+  color: #17324a;
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-weight: 700;
+}
+
+.dashboard-content-grid {
+  display: grid;
+  grid-template-columns: 1.15fr 0.85fr;
+  gap: 20px;
+}
+
+.dashboard-content-grid-single {
+  grid-template-columns: 1fr;
+}
+
+.dashboard-panel {
+  padding: 22px;
+}
+
+.panel-head {
+  margin-bottom: 16px;
+}
+
+.panel-head h2 {
+  margin: 0 0 6px;
+  color: #17324a;
+  font-size: 1.2rem;
+}
+
+.panel-head p {
+  margin: 0;
+  color: #627588;
+  font-size: 0.92rem;
+}
+
+.district-chip-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.dashboard-empty {
+  width: 100%;
+  padding: 18px 0 4px;
+  color: #627588;
+}
+
+.district-chip {
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(22, 57, 87, 0.95), rgba(39, 106, 152, 0.84));
+  color: #fff;
+  font-size: 0.88rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+@media (max-width: 860px) {
+  .dashboard-page {
+    padding: 18px;
+  }
+
+  .stats-grid,
+  .dashboard-content-grid {
+    grid-template-columns: 1fr;
+  }
+}

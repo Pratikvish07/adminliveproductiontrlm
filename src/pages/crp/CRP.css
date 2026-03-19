@@ -1,0 +1,39 @@
+/* CRP Approval Page - Government Portal Style */
+
+.crp-page {
+  padding: var(--gov-space-xl);
+}
+
+.table-container {
+  overflow-x: auto;
+}
+
+.table-actions {
+  display: flex;
+  gap: var(--gov-space-sm);
+}
+
+.table-empty {
+  text-align: center;
+  padding: var(--gov-space-xl);
+  color: var(--gov-gray-600);
+}
+
+.empty-icon {
+  font-size: 4rem;
+  opacity: 0.3;
+  margin-bottom: var(--gov-space-lg);
+}
+
+.gov-badge {
+  min-width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--gov-primary);
+  color: var(--gov-white);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1.1rem;
+}
