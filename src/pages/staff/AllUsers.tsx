@@ -1,11 +1,16 @@
 import React from 'react';
 import Loader from '../../components/common/Loader';
+import { useAuth } from '../../context/AuthContext';
 import { staffService } from '../../services/staffService';
 import StaffTable from './StaffTable';
 import { toStaffRecords } from './staffUtils';
+import { filterByDistrictAndBlock } from '../../utils/roleAccess';
+import { useResolvedScope } from '../../utils/useResolvedScope';
 import './Staff.css';
 
 const AllUsers: React.FC = () => {
+  const { user } = useAuth();
+  const { scopedUser } = useResolvedScope(user);
   const hasLoadedRef = React.useRef(false);
   const [records, setRecords] = React.useState<ReturnType<typeof toStaffRecords>>([]);
   const [loading, setLoading] = React.useState(true);
@@ -16,11 +21,18 @@ const AllUsers: React.FC = () => {
       setLoading(true);
       setError('');
       const response = await staffService.getAllUsers();
-      setRecords(toStaffRecords(response));
+      setRecords(
+        filterByDistrictAndBlock(
+          toStaffRecords(response),
+          scopedUser,
+          ['districtId', 'district', 'districtName'],
+          ['blockId', 'block', 'blockName'],
+        ),
+      );
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [scopedUser]);
 
   React.useEffect(() => {
     if (hasLoadedRef.current) {
@@ -49,6 +61,24 @@ const AllUsers: React.FC = () => {
       </div>
 
       <div className="staff-layout">
+        <section className="staff-summary-strip">
+          <div className="staff-summary-tile">
+            <span className="staff-summary-label">Registered Users</span>
+            <strong>{records.length}</strong>
+            <p>Total records returned from the admin users endpoint.</p>
+          </div>
+          <div className="staff-summary-tile">
+            <span className="staff-summary-label">Portal Mode</span>
+            <strong>Admin Review</strong>
+            <p>Use this space to inspect role, district, and onboarding metadata.</p>
+          </div>
+          <div className="staff-summary-tile">
+            <span className="staff-summary-label">Table Status</span>
+            <strong>{error ? 'Attention' : 'Ready'}</strong>
+            <p>{error ? 'Some records failed to load.' : 'Data table is aligned and ready for review.'}</p>
+          </div>
+        </section>
+
         <section className="staff-panel">
           <div className="staff-panel-head">
             <div>
@@ -66,7 +96,7 @@ const AllUsers: React.FC = () => {
 
         <StaffTable
           title="All Users"
-          description="Showing every user returned by the admin users API."
+          description="Showing every user returned by the admin users API in a structured admin table."
           records={records}
           error={error}
           emptyMessage="No users found."

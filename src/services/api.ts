@@ -14,7 +14,10 @@ const api = axios.create({
 
 // Add auth token interceptor
 api.interceptors.request.use((config) => {
-  const isPublicAuthRoute = config.url === '/api/admin/login' || config.url === '/api/admin/signup';
+  const normalizedUrl = typeof config.url === 'string' ? config.url : '';
+  const isPublicAuthRoute =
+    normalizedUrl === '/admin/login' ||
+    normalizedUrl === '/admin/signup';
 
   if (isPublicAuthRoute) {
     if (config.headers?.Authorization) {

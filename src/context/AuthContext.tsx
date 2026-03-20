@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useState, type ReactNode } from 'react';
 import type { User } from '../types/auth.types';
 
+const AUTH_STORAGE_KEY = 'trlm_auth_user';
+
 interface AuthContextType {
   isAuthenticated: boolean;
   user: User | null;
@@ -15,19 +17,29 @@ interface Props {
 }
 
 export const AuthProvider: React.FC<Props> = ({ children }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<User | null>(() => {
+    try {
+      const rawUser = localStorage.getItem(AUTH_STORAGE_KEY);
+      return rawUser ? JSON.parse(rawUser) as User : null;
+    } catch {
+      localStorage.removeItem(AUTH_STORAGE_KEY);
+      return null;
+    }
+  });
+  const [isAuthenticated, setIsAuthenticated] = useState(() => Boolean(localStorage.getItem('token')));
 
   const login = (userData: User) => {
     setUser(userData);
     setIsAuthenticated(true);
-    // TODO: Persist to localStorage
+    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(userData));
   };
 
   const logout = () => {
     setUser(null);
     setIsAuthenticated(false);
-    // TODO: Clear localStorage
+    localStorage.removeItem(AUTH_STORAGE_KEY);
+    localStorage.removeItem('token');
+    localStorage.removeItem('role');
   };
 
   return (
@@ -44,4 +56,3 @@ export const useAuth = () => {
   }
   return context;
 };
-

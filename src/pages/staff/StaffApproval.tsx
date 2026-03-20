@@ -1,83 +1,79 @@
 import React from 'react';
 import Loader from '../../components/common/Loader';
 import { staffService } from '../../services/staffService';
-import { resolveStaffId } from './staffUtils';
+import { getApprovalBucket, getStaffRoleLabel, resolveStaffId } from './staffUtils';
 import type { PendingStaffRecord } from '../../types/common.types';
 import './StaffApproval.css';
 
-/* ─── Tab config ─────────────────────────────────────────────── */
 type TabKey = 'pending' | 'approved' | 'rejected';
 
-const TABS: { key: TabKey; label: string; icon: string }[] = [
-  { key: 'pending',  label: 'Pending',  icon: '⏳' },
-  { key: 'approved', label: 'Approved', icon: '✓'  },
-  { key: 'rejected', label: 'Rejected', icon: '✕'  },
+const TABS: Array<{ key: TabKey; label: string; icon: string }> = [
+  { key: 'pending', label: 'Pending', icon: '...' },
+  { key: 'approved', label: 'Approved', icon: 'OK' },
+  { key: 'rejected', label: 'Rejected', icon: 'NO' },
 ];
 
-/* ─── Display helpers ────────────────────────────────────────── */
-function getName(s: PendingStaffRecord): string {
-  return s.officialName ?? s.name ?? s.livelihoodTrackerId ?? '—';
-}
-function getEmail(s: PendingStaffRecord): string {
-  return s.officialEmail ?? s.email ?? '—';
-}
+const getName = (staff: PendingStaffRecord): string =>
+  String(staff.officialName ?? staff.name ?? staff.livelihoodTrackerId ?? '-');
 
-/* ═══════════════════════════════════════════════════════════════
-   StaffApproval
-═══════════════════════════════════════════════════════════════ */
+const getEmail = (staff: PendingStaffRecord): string =>
+  String(staff.officialEmail ?? staff.email ?? '-');
+
+const getFieldValue = (value: PendingStaffRecord[keyof PendingStaffRecord]): string =>
+  String(value ?? '-');
+
 const StaffApproval: React.FC = () => {
   const hasLoadedRef = React.useRef(false);
-
   const [activeTab, setActiveTab] = React.useState<TabKey>('pending');
   const [lists, setLists] = React.useState<Record<TabKey, PendingStaffRecord[]>>({
-    pending:  [],
+    pending: [],
     approved: [],
     rejected: [],
   });
-
-  const [loading,     setLoading]     = React.useState(true);
-  const [error,       setError]       = React.useState('');
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState('');
   const [approvingId, setApprovingId] = React.useState('');
   const [rejectingId, setRejectingId] = React.useState('');
-  const [toast,       setToast]       = React.useState<{ msg: string; ok: boolean } | null>(null);
-  const [search,      setSearch]      = React.useState('');
+  const [toast, setToast] = React.useState<{ msg: string; ok: boolean } | null>(null);
+  const [search, setSearch] = React.useState('');
 
-  /* ── Toast ────────────────────────────────────────────────── */
-  const showToast = (msg: string, ok: boolean) => {
+  const showToast = React.useCallback((msg: string, ok: boolean) => {
     setToast({ msg, ok });
-    setTimeout(() => setToast(null), 3500);
-  };
+    window.setTimeout(() => setToast(null), 3500);
+  }, []);
 
-  /* ── Load all three lists in parallel ─────────────────────── */
   const loadAll = React.useCallback(async () => {
     setLoading(true);
     setError('');
 
-    const [pendingRes, approvedRes, rejectedRes] = await Promise.allSettled([
+    const [pendingRes, allUsersRes] = await Promise.allSettled([
       staffService.getPendingStaff(),
-      staffService.getApprovedStaff(),
-      staffService.getRejectedStaff(),
+      staffService.getAllUsers(),
     ]);
 
-    if (pendingRes.status  === 'rejected') {
-      console.error('[StaffApproval] pending failed',  pendingRes.reason);
-    }
-    if (approvedRes.status === 'rejected') {
-      console.error('[StaffApproval] approved failed', approvedRes.reason);
-    }
-    if (rejectedRes.status === 'rejected') {
-      console.error('[StaffApproval] rejected failed', rejectedRes.reason);
-    }
-
-    setLists({
-      pending:  pendingRes.status  === 'fulfilled' ? pendingRes.value  : [],
-      approved: approvedRes.status === 'fulfilled' ? approvedRes.value : [],
-      rejected: rejectedRes.status === 'fulfilled' ? rejectedRes.value : [],
+    const pending = pendingRes.status === 'fulfilled' ? pendingRes.value : [];
+    const allUsers = allUsersRes.status === 'fulfilled' ? allUsersRes.value : [];
+    const pendingIds = new Set(
+      pending
+        .map((staff) => resolveStaffId(staff))
+        .filter((staffId): staffId is string => Boolean(staffId)),
+    );
+    const approved = allUsers.filter((staff) => {
+      const staffId = resolveStaffId(staff);
+      return !pendingIds.has(staffId ?? '') && getApprovalBucket(staff) === 'approved';
+    });
+    const rejected = allUsers.filter((staff) => {
+      const staffId = resolveStaffId(staff);
+      return !pendingIds.has(staffId ?? '') && getApprovalBucket(staff) === 'rejected';
     });
 
-    const allFailed = [pendingRes, approvedRes, rejectedRes].every(
-      (r) => r.status === 'rejected',
-    );
+    setLists({
+      pending,
+      approved,
+      rejected,
+    });
+
+    const allFailed = [pendingRes, allUsersRes].every((result) => result.status === 'rejected');
     if (allFailed) {
       setError('Could not load staff data. Please refresh.');
     } else if (pendingRes.status === 'rejected') {
@@ -87,45 +83,37 @@ const StaffApproval: React.FC = () => {
     setLoading(false);
   }, []);
 
-  /* Run once on mount */
   React.useEffect(() => {
-    if (hasLoadedRef.current) return;
+    if (hasLoadedRef.current) {
+      return;
+    }
+
     hasLoadedRef.current = true;
-    loadAll().catch((err) => {
+    void loadAll().catch((err) => {
       console.error('[StaffApproval] loadAll failed', err);
       setError('Failed to load staff data.');
       setLoading(false);
     });
   }, [loadAll]);
 
-  /* ── Approve ──────────────────────────────────────────────── */
   const handleApprove = async (staffId: string) => {
     setApprovingId(staffId);
     setError('');
+
     try {
       await staffService.approveStaff(staffId);
-
-      /* Optimistic: remove from pending immediately */
       setLists((prev) => ({
         ...prev,
-        pending: prev.pending.filter(
-          (s) => resolveStaffId(s) !== staffId,
-        ),
+        pending: prev.pending.filter((staff) => resolveStaffId(staff) !== staffId),
       }));
-
       showToast('Staff record approved successfully.', true);
-
-      /* Reload approved list silently in background */
-      staffService.getApprovedStaff()
-        .then((data) => setLists((prev) => ({ ...prev, approved: data })))
-        .catch(() => null);
-
+      void loadAll();
     } catch (err: any) {
       console.error('Failed to approve staff', {
         staffId,
         status: err?.response?.status,
-        data:   err?.response?.data,
-        url:    err?.config?.url,
+        data: err?.response?.data,
+        url: err?.config?.url,
       });
       showToast(
         err?.response?.status === 404
@@ -139,32 +127,24 @@ const StaffApproval: React.FC = () => {
     }
   };
 
-  /* ── Reject ───────────────────────────────────────────────── */
   const handleReject = async (staffId: string) => {
     setRejectingId(staffId);
     setError('');
+
     try {
       await staffService.rejectStaff(staffId);
-
       setLists((prev) => ({
         ...prev,
-        pending: prev.pending.filter(
-          (s) => resolveStaffId(s) !== staffId,
-        ),
+        pending: prev.pending.filter((staff) => resolveStaffId(staff) !== staffId),
       }));
-
       showToast('Staff record rejected successfully.', true);
-
-      staffService.getRejectedStaff()
-        .then((data) => setLists((prev) => ({ ...prev, rejected: data })))
-        .catch(() => null);
-
+      void loadAll();
     } catch (err: any) {
       console.error('Failed to reject staff', {
         staffId,
         status: err?.response?.status,
-        data:   err?.response?.data,
-        url:    err?.config?.url,
+        data: err?.response?.data,
+        url: err?.config?.url,
       });
       showToast(
         err?.response?.status === 404
@@ -178,54 +158,53 @@ const StaffApproval: React.FC = () => {
     }
   };
 
-  /* ── Search filter ────────────────────────────────────────── */
   const filtered = React.useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return lists[activeTab];
-    return lists[activeTab].filter((s) =>
+    const query = search.trim().toLowerCase();
+    if (!query) {
+      return lists[activeTab];
+    }
+
+    return lists[activeTab].filter((staff) =>
       [
-        getName(s),
-        getEmail(s),
-        s.designation,
-        s.districtName,
-        s.blockName,
-        s.role,
-        resolveStaffId(s),
+        getName(staff),
+        getEmail(staff),
+        staff.designation,
+        staff.districtName,
+        staff.blockName,
+        getStaffRoleLabel(staff),
+        resolveStaffId(staff),
       ]
         .filter(Boolean)
-        .some((v) => v!.toLowerCase().includes(q)),
+        .some((value) => String(value).toLowerCase().includes(query)),
     );
-  }, [lists, activeTab, search]);
+  }, [activeTab, lists, search]);
 
-  /* ── Render ───────────────────────────────────────────────── */
-  if (loading) return <Loader />;
+  if (loading) {
+    return <Loader />;
+  }
 
   const isBusy = approvingId !== '' || rejectingId !== '';
 
   return (
     <div className="sa-page">
-
-      {/* Header */}
       <div className="sa-header">
         <div>
           <p className="sa-sup">Staff Management</p>
           <h1 className="sa-title">Staff Approval</h1>
-          <p className="sa-desc">
-            Review pending requests and approve or reject from one place.
-          </p>
+          <p className="sa-desc">Review pending requests and approve or reject from one place.</p>
         </div>
+
         <div className="sa-counts">
-          {TABS.map((t) => (
-            <div key={t.key} className={`sa-count-pill sa-count--${t.key}`}>
-              <span>{t.icon}</span>
-              <strong>{lists[t.key].length}</strong>
-              <span>{t.label}</span>
+          {TABS.map((tab) => (
+            <div key={tab.key} className={`sa-count-pill sa-count--${tab.key}`}>
+              <span>{tab.icon}</span>
+              <strong>{lists[tab.key].length}</strong>
+              <span>{tab.label}</span>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Error banner */}
       {error && (
         <div className="sa-alert" role="alert">
           <span className="sa-alert-icon" aria-hidden="true">!</span>
@@ -233,30 +212,29 @@ const StaffApproval: React.FC = () => {
         </div>
       )}
 
-      {/* Toast */}
       {toast && (
-        <div
-          className={`sa-toast sa-toast--${toast.ok ? 'ok' : 'err'}`}
-          role="status"
-        >
-          {toast.ok ? '✓' : '✕'}&nbsp;{toast.msg}
+        <div className={`sa-toast sa-toast--${toast.ok ? 'ok' : 'err'}`} role="status">
+          {toast.ok ? 'OK' : 'NO'} {toast.msg}
         </div>
       )}
 
-      {/* Toolbar: tabs + search */}
       <div className="sa-toolbar">
         <div className="sa-tabs" role="tablist">
-          {TABS.map((t) => (
+          {TABS.map((tab) => (
             <button
-              key={t.key}
+              key={tab.key}
               role="tab"
-              aria-selected={activeTab === t.key}
-              className={`sa-tab sa-tab--${t.key}${activeTab === t.key ? ' sa-tab--active' : ''}`}
-              onClick={() => { setActiveTab(t.key); setSearch(''); }}
+              aria-selected={activeTab === tab.key}
+              className={`sa-tab sa-tab--${tab.key}${activeTab === tab.key ? ' sa-tab--active' : ''}`}
+              onClick={() => {
+                setActiveTab(tab.key);
+                setSearch('');
+              }}
+              type="button"
             >
-              <span>{t.icon}</span>
-              {t.label}
-              <span className="sa-tab-badge">{lists[t.key].length}</span>
+              <span>{tab.icon}</span>
+              {tab.label}
+              <span className="sa-tab-badge">{lists[tab.key].length}</span>
             </button>
           ))}
         </div>
@@ -264,20 +242,17 @@ const StaffApproval: React.FC = () => {
         <input
           className="sa-search"
           type="text"
-          placeholder="Search name, email, district…"
+          placeholder="Search name, email, district..."
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(event) => setSearch(event.target.value)}
           aria-label="Search staff"
         />
       </div>
 
-      {/* Table card */}
       <div className="sa-card">
         {filtered.length === 0 ? (
           <div className="sa-empty">
-            {search
-              ? 'No results match your search.'
-              : `No ${activeTab} staff requests found.`}
+            {search ? 'No results match your search.' : `No ${activeTab} staff requests found.`}
           </div>
         ) : (
           <div className="sa-table-wrap">
@@ -297,65 +272,62 @@ const StaffApproval: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((staff, idx) => {
-                  const staffId    = resolveStaffId(staff);
+                {filtered.map((staff, index) => {
+                  const staffId = resolveStaffId(staff);
                   const isApproving = approvingId === staffId;
                   const isRejecting = rejectingId === staffId;
-                  const rowBusy     = isApproving || isRejecting;
+                  const rowBusy = isApproving || isRejecting;
 
                   return (
-                    <tr
-                      key={staffId || idx}
-                      className={rowBusy ? 'sa-row--busy' : ''}
-                    >
-                      <td className="sa-td-num">{idx + 1}</td>
-
+                    <tr key={staffId || index} className={rowBusy ? 'sa-row--busy' : ''}>
+                      <td className="sa-td-num">{index + 1}</td>
                       <td className="sa-td-name">
-                        <div className="sa-avatar">
-                          {getName(staff).charAt(0).toUpperCase()}
-                        </div>
+                        <div className="sa-avatar">{getName(staff).charAt(0).toUpperCase()}</div>
                         <span>{getName(staff)}</span>
                       </td>
-
-                      <td className="sa-td-mono">{staffId || '—'}</td>
-                      <td>{staff.designation   ?? '—'}</td>
+                      <td className="sa-td-mono">{staffId || '-'}</td>
+                      <td>{getFieldValue(staff.designation)}</td>
                       <td className="sa-td-email">{getEmail(staff)}</td>
-                      <td>{staff.contactNumber ?? '—'}</td>
-                      <td>{staff.districtName  ?? '—'}</td>
-                      <td>{staff.blockName     ?? '—'}</td>
+                      <td>{getFieldValue(staff.contactNumber)}</td>
+                      <td>{getFieldValue(staff.districtName)}</td>
+                      <td>{getFieldValue(staff.blockName)}</td>
                       <td>
-                        {staff.role
-                          ? <span className="sa-role-badge">{staff.role}</span>
-                          : '—'}
+                        <span className="sa-role-badge">{getStaffRoleLabel(staff)}</span>
                       </td>
 
                       {activeTab === 'pending' ? (
                         <td className="sa-td-actions">
                           <button
                             className="sa-btn sa-btn--approve"
-                            onClick={() => handleApprove(staffId)}
+                            onClick={() => {
+                              if (staffId) {
+                                void handleApprove(staffId);
+                              }
+                            }}
                             disabled={isBusy || !staffId}
                             aria-label={`Approve ${getName(staff)}`}
+                            type="button"
                           >
-                            {isApproving
-                              ? <span className="sa-spinner sa-spinner--sm" />
-                              : '✓ Approve'}
+                            {isApproving ? <span className="sa-spinner sa-spinner--sm" /> : 'Approve'}
                           </button>
                           <button
                             className="sa-btn sa-btn--reject"
-                            onClick={() => handleReject(staffId)}
+                            onClick={() => {
+                              if (staffId) {
+                                void handleReject(staffId);
+                              }
+                            }}
                             disabled={isBusy || !staffId}
                             aria-label={`Reject ${getName(staff)}`}
+                            type="button"
                           >
-                            {isRejecting
-                              ? <span className="sa-spinner sa-spinner--sm" />
-                              : '✕ Reject'}
+                            {isRejecting ? <span className="sa-spinner sa-spinner--sm" /> : 'Reject'}
                           </button>
                         </td>
                       ) : (
                         <td>
                           <span className={`sa-status-badge sa-status--${activeTab}`}>
-                            {activeTab === 'approved' ? '✓ Approved' : '✕ Rejected'}
+                            {activeTab === 'approved' ? 'Approved' : 'Rejected'}
                           </span>
                         </td>
                       )}
@@ -367,7 +339,6 @@ const StaffApproval: React.FC = () => {
           </div>
         )}
       </div>
-
     </div>
   );
 };

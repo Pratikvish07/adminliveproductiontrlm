@@ -14,9 +14,6 @@ import MasterFilter from '../pages/master/MasterFilter';
 // Staff
 import AllUsers from '../pages/staff/AllUsers';
 import StaffApproval from '../pages/staff/StaffApproval';
-// SHG
-import SHGList from '../pages/shg/SHGList';
-import SHGDetails from '../pages/shg/SHGDetails';
 // CRP
 import CRPList from '../pages/crp/CRPList';
 import CRPApproval from '../pages/crp/CRPApproval';
@@ -25,6 +22,9 @@ import CRPTracking from '../pages/crp/CRPTracking';
 import LoanTracking from '../pages/payment/LoanTracking';
 import LoanApproval from '../pages/payment/LoanApproval';
 import Payments from '../pages/payment/Payments';
+import Reports from '../pages/reports/Reports';
+import Settings from '../pages/settings/Settings';
+import { ROLE_IDS } from '../utils/roleAccess';
 
 const AppRoutes: React.FC = () => {
   return (
@@ -41,26 +41,64 @@ const AppRoutes: React.FC = () => {
         <Route path="/" element={<Dashboard />} />
         <Route path="/dashboard" element={<Dashboard />} />
         {/* Master */}
-        <Route path="/master/district" element={<District />} />
-        <Route path="/master/block" element={<Block />} />
-        <Route path="/master/village" element={<Village />} />
-        <Route path="/master/gram-panchayat" element={<GramPanchayat />} />
-        <Route path="/master/filter" element={<MasterFilter />} />
+        <Route
+          path="/master/district"
+          element={<ProtectedRoute allowedRoles={[ROLE_IDS.STATE_ADMIN]}><District /></ProtectedRoute>}
+        />
+        <Route
+          path="/master/block"
+          element={<ProtectedRoute allowedRoles={[ROLE_IDS.STATE_ADMIN, ROLE_IDS.DISTRICT_STAFF]}><Block /></ProtectedRoute>}
+        />
+        <Route
+          path="/master/village"
+          element={<ProtectedRoute allowedRoles={[ROLE_IDS.STATE_ADMIN, ROLE_IDS.DISTRICT_STAFF, ROLE_IDS.BLOCK_STAFF]}><Village /></ProtectedRoute>}
+        />
+        <Route
+          path="/master/gram-panchayat"
+          element={<ProtectedRoute allowedRoles={[ROLE_IDS.STATE_ADMIN, ROLE_IDS.DISTRICT_STAFF, ROLE_IDS.BLOCK_STAFF]}><GramPanchayat /></ProtectedRoute>}
+        />
+        <Route
+          path="/master/filter"
+          element={<ProtectedRoute allowedRoles={[ROLE_IDS.STATE_ADMIN, ROLE_IDS.DISTRICT_STAFF]}><MasterFilter /></ProtectedRoute>}
+        />
         {/* Staff */}
-        <Route path="/staff" element={<StaffApproval />} />
-        <Route path="/staff/approval" element={<StaffApproval />} />
-        <Route path="/staff/users" element={<AllUsers />} />
-        {/* SHG */}
-        <Route path="/shg/list" element={<SHGList />} />
-        <Route path="/shg/details/:id" element={<SHGDetails />} />
+        <Route
+          path="/staff"
+          element={<ProtectedRoute allowedRoles={[ROLE_IDS.STATE_ADMIN]}><StaffApproval /></ProtectedRoute>}
+        />
+        <Route
+          path="/staff/approval"
+          element={<ProtectedRoute allowedRoles={[ROLE_IDS.STATE_ADMIN]}><StaffApproval /></ProtectedRoute>}
+        />
+        <Route
+          path="/staff/users"
+          element={<ProtectedRoute allowedRoles={[ROLE_IDS.STATE_ADMIN]}><AllUsers /></ProtectedRoute>}
+        />
         {/* CRP */}
-        <Route path="/crp/list" element={<CRPList />} />
-        <Route path="/crp/approval" element={<CRPApproval />} />
-        <Route path="/crp/tracking" element={<CRPTracking />} />
+        <Route
+          path="/crp/list"
+          element={<ProtectedRoute allowedRoles={[ROLE_IDS.STATE_ADMIN, ROLE_IDS.DISTRICT_STAFF, ROLE_IDS.BLOCK_STAFF]}><CRPList /></ProtectedRoute>}
+        />
+        <Route
+          path="/crp/approval"
+          element={<ProtectedRoute allowedRoles={[ROLE_IDS.BLOCK_STAFF]}><CRPApproval /></ProtectedRoute>}
+        />
+        <Route
+          path="/crp/tracking"
+          element={<ProtectedRoute allowedRoles={[ROLE_IDS.STATE_ADMIN, ROLE_IDS.DISTRICT_STAFF, ROLE_IDS.BLOCK_STAFF]}><CRPTracking /></ProtectedRoute>}
+        />
         {/* Payment */}
         <Route path="/payment/loan-tracking" element={<LoanTracking />} />
         <Route path="/payment/loan-approval" element={<LoanApproval />} />
         <Route path="/payment/payments" element={<Payments />} />
+        <Route
+          path="/reports"
+          element={<ProtectedRoute allowedRoles={[ROLE_IDS.STATE_ADMIN, ROLE_IDS.DISTRICT_STAFF]}><Reports /></ProtectedRoute>}
+        />
+        <Route
+          path="/settings"
+          element={<ProtectedRoute allowedRoles={[ROLE_IDS.STATE_ADMIN]}><Settings /></ProtectedRoute>}
+        />
       </Route>
       <Route path="*" element={<div>404 - Not Found</div>} />
     </Routes>

@@ -1,68 +1,191 @@
 import React from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Users, Building2, CreditCard, ChevronRight, ChevronLeft, LogOut } from 'lucide-react';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
+import {
+  BarChart3,
+  Building2,
+  ChevronLeft,
+  ChevronRight,
+  LayoutDashboard,
+  LogOut,
+  Map,
+  ShieldCheck,
+  Settings,
+} from 'lucide-react';
 import { useSidebar } from '../../context/SidebarContext';
 import { useAuth } from '../../context/AuthContext';
+import { getRoleLabel, isBlockStaff, isDistrictStaff, isStateAdmin } from '../../utils/roleAccess';
 
 const Sidebar: React.FC = () => {
   const location = useLocation();
-  const { isCollapsed, toggleCollapse } = useSidebar();
-  const { logout } = useAuth();
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
+  const { isCollapsed, isMobileOpen, toggleCollapse, closeMobile } = useSidebar();
 
   const isActive = (path: string) => location.pathname.startsWith(path);
 
-  const menuItems = [
-    { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { path: '/staff', label: 'Staff', icon: Users },
-    { path: '/shg', label: 'SHG', icon: Building2 },
-    { path: '/payment', label: 'Payments', icon: CreditCard },
-  ];
+  const menuSections = React.useMemo(() => {
+    if (isStateAdmin(user)) {
+      return [
+        {
+          label: 'Overview',
+          items: [{ path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard }],
+        },
+        {
+          label: 'Administration',
+          items: [
+            { path: '/staff/approval', label: 'Staff Approval', icon: ShieldCheck },
+            { path: '/master/district', label: 'District Management', icon: Building2 },
+            { path: '/master/block', label: 'Block Management', icon: Building2 },
+            { path: '/crp/list', label: 'CRP Management', icon: Map },
+            { path: '/reports', label: 'Reports', icon: BarChart3 },
+            { path: '/settings', label: 'Settings', icon: Settings },
+          ],
+        },
+      ];
+    }
+
+    if (isDistrictStaff(user)) {
+      return [
+        {
+          label: 'Overview',
+          items: [{ path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard }],
+        },
+        {
+          label: 'Management',
+          items: [
+            { path: '/master/block', label: 'Block Management', icon: Building2 },
+            { path: '/master/filter', label: 'Master Filter', icon: Building2 },
+            { path: '/master/village', label: 'Village Monitoring', icon: Map },
+            { path: '/master/gram-panchayat', label: 'GP Monitoring', icon: Map },
+            { path: '/crp/list', label: 'CRP Management', icon: Map },
+            { path: '/crp/tracking', label: 'CRP Tracking', icon: ShieldCheck },
+            { path: '/reports', label: 'Reports', icon: BarChart3 },
+          ],
+        },
+      ];
+    }
+
+    if (isBlockStaff(user)) {
+      return [
+        {
+          label: 'Overview',
+          items: [{ path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard }],
+        },
+        {
+          label: 'Operations',
+          items: [
+            { path: '/master/village', label: 'Village Monitoring', icon: Map },
+            { path: '/master/gram-panchayat', label: 'GP Monitoring', icon: Map },
+            { path: '/crp/approval', label: 'CRP Approval', icon: ShieldCheck },
+            { path: '/crp/list', label: 'CRP Management', icon: Map },
+            { path: '/crp/tracking', label: 'CRP Tracking', icon: ShieldCheck },
+          ],
+        },
+      ];
+    }
+
+    return [
+      {
+        label: 'Overview',
+        items: [{ path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard }],
+      },
+      {
+        label: 'Administration',
+        items: [
+          { path: '/staff/approval', label: 'Staff Approval', icon: ShieldCheck },
+          { path: '/master/district', label: 'District Management', icon: Building2 },
+          { path: '/master/block', label: 'Block Management', icon: Building2 },
+          { path: '/crp/approval', label: 'CRP Approval', icon: ShieldCheck },
+          { path: '/crp/list', label: 'CRP Management', icon: Map },
+          { path: '/reports', label: 'Reports', icon: BarChart3 },
+          { path: '/settings', label: 'Settings', icon: Settings },
+        ],
+      },
+    ];
+  }, [user]);
+
+  const roleLabel = getRoleLabel(user?.roleId || user?.role || '');
 
   return (
-    <aside className="gov-sidebar fixed left-0 top-0 h-screen w-[240px] bg-gradient-to-b from-[#1E3A8A] to-[#1E40AF] shadow-2xl z-30 flex flex-col">
-      {/* Logo */}
-      <div className="p-6 border-b border-white/20">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
-            <span className="text-white font-bold text-xl">T</span>
+    <aside className={`gov-sidebar${isMobileOpen ? ' is-mobile-open' : ''}`}>
+      <div className="gov-sidebar__top">
+        <div className="gov-sidebar__brand">
+          <div className="gov-sidebar__brand-mark">
+            <span>T</span>
           </div>
-          {!isCollapsed && <div>
-            <h2 className="text-white font-bold text-xl">TRLM Portal</h2>
-            <p className="text-white/80 text-sm">Admin Dashboard</p>
-          </div>}
+          {!isCollapsed && (
+            <div className="gov-sidebar__brand-copy">
+              <h2>TRLM Portal</h2>
+              <p>Admin workspace</p>
+            </div>
+          )}
         </div>
+
+        <button
+          className="gov-sidebar__toggle"
+          onClick={toggleCollapse}
+          type="button"
+          aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        >
+          {isCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+        </button>
       </div>
 
-      {/* Toggle */}
-      <button 
-        className="absolute top-20 right-2 p-2 bg-white/10 rounded-lg hover:bg-white/20 transition-all z-40"
-        onClick={toggleCollapse}
-      >
-        {isCollapsed ? <ChevronRight size={20} className="text-white" /> : <ChevronLeft size={20} className="text-white" />}
-      </button>
+      <div className="gov-sidebar__profile">
+        <div className="gov-sidebar__profile-avatar">
+          {isStateAdmin(user) ? 'SA' : isDistrictStaff(user) ? 'DS' : 'BS'}
+        </div>
+        {!isCollapsed && (
+          <div className="gov-sidebar__profile-copy">
+            <span className="gov-sidebar__profile-label">Active Role</span>
+            <strong>{roleLabel}</strong>
+            <span className="gov-sidebar__profile-subtitle">
+              {user?.districtName || user?.blockName || 'Portal management'}
+            </span>
+          </div>
+        )}
+      </div>
 
-      {/* Menu */}
-      <nav className="flex-1 mt-24 px-4 py-6 space-y-2 overflow-y-auto">
-        {menuItems.map((item) => (
-          <Link
-            key={item.path}
-            to={item.path}
-            className={`gov-nav-item flex items-center gap-3 p-3 rounded-xl transition-all group ${isActive(item.path) ? 'bg-white/20 border-l-4 border-white' : 'hover:bg-white/10'}`}
-          >
-            <item.icon size={20} className={`text-white/90 group-hover:text-white shrink-0`} />
-            {!isCollapsed && <span className="text-white font-medium whitespace-nowrap">{item.label}</span>}
-          </Link>
+      <nav className="gov-sidebar__nav" aria-label="Primary navigation">
+        {menuSections.map((section) => (
+          <div className="gov-sidebar__section" key={section.label}>
+            {!isCollapsed && <p className="gov-sidebar__section-label">{section.label}</p>}
+            <div className="gov-sidebar__links">
+              {section.items.map((item) => {
+                const Icon = item.icon;
+                const active = isActive(item.path);
+
+                return (
+                  <NavLink
+                    key={item.path}
+                    to={item.path}
+                    className={`gov-sidebar__link${active ? ' is-active' : ''}`}
+                    onClick={closeMobile}
+                    title={isCollapsed ? item.label : undefined}
+                  >
+                    <span className="gov-sidebar__link-icon">
+                      <Icon size={18} />
+                    </span>
+                    {!isCollapsed && <span className="gov-sidebar__link-text">{item.label}</span>}
+                  </NavLink>
+                );
+              })}
+            </div>
+          </div>
         ))}
       </nav>
 
-      {/* Sticky Sign Out */}
-      <div className="p-4 border-t border-white/20 mt-auto bg-black/20">
-        <button 
-          className="w-full flex items-center gap-3 p-3 rounded-xl text-red-300 hover:text-red-200 hover:bg-red-500/20 transition-all text-left"
-          onClick={() => { logout(); navigate('/login'); }}
+      <div className="gov-sidebar__footer">
+        <button
+          className="gov-sidebar__signout"
+          type="button"
+          onClick={() => {
+            logout();
+            closeMobile();
+            navigate('/login');
+          }}
         >
-          <LogOut size={20} />
+          <LogOut size={18} />
           {!isCollapsed && <span>Sign Out</span>}
         </button>
       </div>

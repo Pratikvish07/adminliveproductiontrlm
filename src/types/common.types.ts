@@ -24,7 +24,10 @@ export interface FilterParams {
   sortOrder?: SortOrder;
 }
 
-export type PendingStaffRecord = Record<string, unknown>;
+export type PendingStaffRecordValue = string | number | boolean | null | undefined;
+
+export type PendingStaffRecord = Record<string, PendingStaffRecordValue>;
+export type PendingCRPRecord = Record<string, PendingStaffRecordValue>;
 
 export interface StaffActionRequest {
   staffId: string | number;

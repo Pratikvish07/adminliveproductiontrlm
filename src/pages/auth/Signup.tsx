@@ -3,6 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import Input from "../../components/common/Input";
 import Button from "../../components/common/Button";
 import { authService } from "../../services/authService";
+import { useAuth } from "../../context/AuthContext";
 import {
   getDistricts,
   getBlocks,
@@ -12,6 +13,7 @@ import {
   peekCachedBlocks,
 } from "../../services/masterService";
 import type { SignupBlockOption } from "../../services/masterService";
+import { getUserRoleId, ROLE_IDS } from "../../utils/roleAccess";
 import "./Signup.css";
 
 /* ── Types ───────────────────────────────────────────────────── */
@@ -52,6 +54,7 @@ const isStrongPw = (v: string) =>
 
 const Signup: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const hasLoadedMasterRef = React.useRef(false);
   const cachedDistricts = React.useMemo(() => peekCachedDistricts(), []);
   const cachedRoles = React.useMemo(() => peekCachedRoles(), []);
@@ -70,6 +73,40 @@ const Signup: React.FC = () => {
   const [success, setSuccess]         = useState(false);
   const [showPw, setShowPw]           = useState(false);
   const [showConfirmPw, setShowConfirmPw] = useState(false);
+  const currentRoleId = getUserRoleId(user);
+  const isDistrictStaff = currentRoleId === ROLE_IDS.DISTRICT_STAFF;
+  const isBlockStaff = currentRoleId === ROLE_IDS.BLOCK_STAFF;
+
+  const visibleDistricts = React.useMemo(() => {
+    if (isDistrictStaff || isBlockStaff) {
+      return districts.filter((district) => String(district.districtId) === String(user?.districtId));
+    }
+
+    return districts;
+  }, [districts, isBlockStaff, isDistrictStaff, user?.districtId]);
+
+  const visibleBlocks = React.useMemo(() => {
+    if (isBlockStaff) {
+      return blocks.filter((block) => String(block.blockId) === String(user?.blockId));
+    }
+
+    return blocks;
+  }, [blocks, isBlockStaff, user?.blockId]);
+
+  const visibleRoles = React.useMemo(() => {
+    if (isBlockStaff) {
+      return roles.filter((role) => String(role.roleId) === ROLE_IDS.BLOCK_STAFF);
+    }
+
+    if (isDistrictStaff) {
+      return roles.filter((role) => {
+        const candidateRoleId = String(role.roleId);
+        return candidateRoleId === ROLE_IDS.DISTRICT_STAFF || candidateRoleId === ROLE_IDS.BLOCK_STAFF;
+      });
+    }
+
+    return roles;
+  }, [isBlockStaff, isDistrictStaff, roles]);
 
   /* ── Load districts + roles on mount ───────────────────────── */
   useEffect(() => {
@@ -110,20 +147,48 @@ const Signup: React.FC = () => {
       .finally(() => setBlocksLoading(false));
   }, [formData.districtId]);
 
+  useEffect(() => {
+    if (isDistrictStaff || isBlockStaff) {
+      setFormData((prev) => ({
+        ...prev,
+        districtId: user?.districtId ? String(user.districtId) : prev.districtId,
+      }));
+    }
+  }, [isBlockStaff, isDistrictStaff, user?.districtId]);
+
+  useEffect(() => {
+    if (isBlockStaff) {
+      setFormData((prev) => ({
+        ...prev,
+        blockId: user?.blockId ? String(user.blockId) : prev.blockId,
+        roleId: prev.roleId || ROLE_IDS.BLOCK_STAFF,
+      }));
+    }
+  }, [isBlockStaff, user?.blockId]);
+
   /* ── Field change ───────────────────────────────────────────── */
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
     setError("");
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData((prev) => {
+      if (name === "roleId" && String(value) === ROLE_IDS.DISTRICT_STAFF) {
+        return { ...prev, roleId: value, blockId: "" };
+      }
+
+      return { ...prev, [name]: value };
+    });
   };
+
+  const showDistrictField = !isBlockStaff;
 
   /* ── Client-side validation ─────────────────────────────────── */
   const validate = (): string => {
     if (!formData.districtId)          return "Please select a District.";
-    if (!formData.blockId)             return "Please select a Block.";
     if (!formData.roleId)              return "Please select a Role.";
+    if (formData.roleId !== ROLE_IDS.DISTRICT_STAFF && !formData.blockId)
+                                      return "Please select a Block.";
     if (!formData.officialName.trim()) return "Official name is required.";
     if (!isPhone(formData.contactNumber))
                                        return "Enter a valid 10-digit mobile number.";
@@ -152,17 +217,18 @@ const Signup: React.FC = () => {
        API expects:  districtName (string), blockName (string), role (string)
        NOT numeric IDs.
     ─────────────────────────────────────────────────────────── */
-    const selectedDistrict = districts.find(
+    const selectedDistrict = visibleDistricts.find(
       (d) => String(d.districtId) === String(formData.districtId)
     );
-    const selectedBlock = blocks.find(
-      (b) => String(b.blockId) === String(formData.blockId)
-    );
-    const selectedRole = roles.find(
+    const selectedRole = visibleRoles.find(
       (r) => String(r.roleId) === String(formData.roleId)
     );
+    const shouldSendNullBlock = String(formData.roleId) === ROLE_IDS.DISTRICT_STAFF;
+    const selectedBlock = shouldSendNullBlock
+      ? null
+      : visibleBlocks.find((b) => String(b.blockId) === String(formData.blockId));
 
-    if (!selectedDistrict || !selectedBlock || !selectedRole) {
+    if (!selectedDistrict || !selectedRole || (!shouldSendNullBlock && !selectedBlock)) {
       setError("Could not resolve selection. Please re-select and try again.");
       return;
     }
@@ -170,7 +236,7 @@ const Signup: React.FC = () => {
     /* ── Build payload matching API contract exactly ──────────── */
     const payload = {
       districtName:        selectedDistrict.districtId.toString(),
-      blockName:           selectedBlock.blockId.toString(),
+      blockName:           shouldSendNullBlock ? null : selectedBlock!.blockId.toString(),
       officialName:        formData.officialName.trim(),
       contactNumber:       formData.contactNumber.trim(),
       officialEmail:       formData.officialEmail.trim().toLowerCase(),
@@ -255,24 +321,26 @@ const Signup: React.FC = () => {
               <div className="signup-section-label">Location &amp; Role</div>
 
               <div className="signup-row">
-                {/* District */}
-                <div className="signup-field">
-                  <label className="signup-label" htmlFor="districtId">District</label>
-                  <select
-                    id="districtId"
-                    name="districtId"
-                    className="signup-select"
-                    value={formData.districtId}
-                    onChange={handleChange}
-                  >
-                    <option value="">Select District</option>
-                    {districts.map((d) => (
-                      <option key={d.districtId} value={d.districtId}>
-                        {d.districtName}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                {showDistrictField && (
+                  <div className="signup-field">
+                    <label className="signup-label" htmlFor="districtId">District</label>
+                    <select
+                      id="districtId"
+                      name="districtId"
+                      className="signup-select"
+                      value={formData.districtId}
+                      onChange={handleChange}
+                      disabled={isDistrictStaff}
+                    >
+                      <option value="">{isDistrictStaff ? "Assigned District" : "Select District"}</option>
+                      {visibleDistricts.map((d) => (
+                        <option key={d.districtId} value={d.districtId}>
+                          {d.districtName}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
                 {/* Block */}
                 <div className="signup-field">
@@ -284,12 +352,12 @@ const Signup: React.FC = () => {
                       className="signup-select"
                       value={formData.blockId}
                       onChange={handleChange}
-                      disabled={!formData.districtId || blocksLoading}
+                      disabled={!formData.districtId || blocksLoading || isBlockStaff}
                     >
                       <option value="">
-                        {blocksLoading ? "Loading…" : "Select Block"}
+                        {blocksLoading ? "Loading…" : isBlockStaff ? "Assigned Block" : "Select Block"}
                       </option>
-                      {blocks.map((b) => (
+                      {visibleBlocks.map((b) => (
                         <option key={b.blockId} value={b.blockId}>
                           {b.blockName}
                         </option>
@@ -310,9 +378,10 @@ const Signup: React.FC = () => {
                     className="signup-select"
                     value={formData.roleId}
                     onChange={handleChange}
+                    disabled={isBlockStaff}
                   >
                     <option value="">Select Role</option>
-                    {roles.map((r) => (
+                    {visibleRoles.map((r) => (
                       <option key={r.roleId} value={r.roleId}>
                         {r.roleName}
                       </option>

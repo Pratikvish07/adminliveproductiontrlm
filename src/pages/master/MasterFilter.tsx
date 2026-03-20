@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Input from '../../components/common/Input';
 import Button from '../../components/common/Button';
+import PageShell from '../../components/common/PageShell';
 
 const MasterFilter: React.FC = () => {
   const [filters, setFilters] = useState({
@@ -20,8 +21,11 @@ const MasterFilter: React.FC = () => {
   };
 
   return (
-    <div className="page">
-      <h1>Master Data Filter</h1>
+    <PageShell
+      kicker="Master Data"
+      title="Master Data Filter"
+      subtitle="Jump into district and block master views from one structured search panel."
+    >
       <div className="filter-panel">
         <Input
           label="District Name"
@@ -37,7 +41,7 @@ const MasterFilter: React.FC = () => {
         />
         <Button onClick={handleBlockSearch}>Search Blocks</Button>
       </div>
-    </div>
+    </PageShell>
   );
 };
 

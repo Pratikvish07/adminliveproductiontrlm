@@ -1,7 +1,11 @@
 export type StaffRecord = Record<string, unknown>;
+import { getRoleLabel, normalizeRoleId } from '../../utils/roleAccess';
 
 const STAFF_ID_CANDIDATES = ['staffId', 'id', 'userId', 'districtStaffId', 'blockStaffId'];
 const APPROVAL_STATE_CANDIDATES = ['approved', 'isApproved', 'approvalStatus', 'status'];
+const ROLE_VALUE_CANDIDATES = ['roleName', 'RoleName', 'role', 'roleId', 'RoleId', 'userRole'];
+
+export type ApprovalBucket = 'pending' | 'approved' | 'rejected' | 'unknown';
 
 export const toStaffRecords = (value: unknown): StaffRecord[] => {
   if (Array.isArray(value)) {
@@ -60,6 +64,69 @@ export const isApprovalPending = (record: StaffRecord): boolean => {
 
 export const hasApprovalState = (record: StaffRecord): boolean =>
   APPROVAL_STATE_CANDIDATES.some((key) => record[key] !== undefined && record[key] !== null);
+
+export const getApprovalBucket = (record: StaffRecord): ApprovalBucket => {
+  let foundApprovalKey = false;
+
+  for (const key of APPROVAL_STATE_CANDIDATES) {
+    const value = record[key];
+    if (value === undefined || value === null || value === '') {
+      continue;
+    }
+
+    foundApprovalKey = true;
+
+    if (typeof value === 'boolean') {
+      return value ? 'approved' : 'pending';
+    }
+
+    if (typeof value === 'string') {
+      const normalized = value.trim().toLowerCase();
+      if (['pending', 'submitted', 'requested', 'awaiting_approval'].includes(normalized)) {
+        return 'pending';
+      }
+      if (['approved', 'active'].includes(normalized)) {
+        return 'approved';
+      }
+      if (['rejected', 'declined', 'inactive'].includes(normalized)) {
+        return 'rejected';
+      }
+    }
+  }
+
+  return foundApprovalKey ? 'unknown' : 'pending';
+};
+
+export const getStaffRoleLabel = (record: StaffRecord): string => {
+  for (const key of ROLE_VALUE_CANDIDATES) {
+    const value = record[key];
+    if (value === null || value === undefined || value === '') {
+      continue;
+    }
+
+    if (typeof value === 'string') {
+      const trimmed = value.trim();
+      if (!trimmed) {
+        continue;
+      }
+
+      const normalizedRoleId = normalizeRoleId(trimmed);
+      const derivedLabel = getRoleLabel(normalizedRoleId);
+      if (derivedLabel !== 'USER') {
+        return derivedLabel;
+      }
+
+      return trimmed;
+    }
+
+    if (typeof value === 'number') {
+      const derivedLabel = getRoleLabel(normalizeRoleId(value));
+      return derivedLabel !== 'USER' ? derivedLabel : String(value);
+    }
+  }
+
+  return '-';
+};
 
 export const formatStaffValue = (value: unknown): string => {
   if (value === null || value === undefined || value === '') {

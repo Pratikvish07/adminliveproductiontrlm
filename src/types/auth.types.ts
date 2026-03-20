@@ -8,18 +8,31 @@ export interface LoginRequest {
 
 export interface LoginResponse {
   token: string;
+  id?: string | number;
+  staffId?: string | number;
+  livelihoodTrackerId?: string;
   role?: string;
+  roleId?: string | number;
+  districtId?: string | number;
+  blockId?: string | number;
   user?: {
     id: string;
+    staffId?: string | number;
+    livelihoodTrackerId?: string;
     email?: string;
     name?: string;
     role: string;
+    roleId?: string | number;
+    districtId?: string | number;
+    blockId?: string | number;
+    districtName?: string;
+    blockName?: string;
   };
 }
 
 export interface SignupRequest {
   districtName: string;
-  blockName: string;
+  blockName: string | null;
   officialName: string;
   contactNumber: string;
   officialEmail: string;
@@ -31,8 +44,15 @@ export interface SignupRequest {
 
 export interface User {
   id: string;
+  staffId?: string;
+  livelihoodTrackerId?: string;
   email: string;
   name: string;
   role: string;
+  roleId?: string;
+  districtId?: string;
+  blockId?: string;
+  districtName?: string;
+  blockName?: string;
 }
 

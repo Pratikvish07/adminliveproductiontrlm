@@ -6,12 +6,12 @@ export const authService = {
     livelihoodTrackerId: string;
     password: string;
   }) => {
-    const res = await api.post('/api/admin/login', data);
+    const res = await api.post('/admin/login', data);
     return res.data;
   },
 
   signup: async (data: SignupRequest) => {
-    const res = await api.post('/api/admin/signup', data);
+    const res = await api.post('/admin/signup', data);
     return res.data;
   },
 };

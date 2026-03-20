@@ -5,12 +5,26 @@ import Button from '../../components/common/Button';
 import { authService } from '../../services/authService';
 import { useAuth } from '../../context/AuthContext';
 import heroImage from '../../assets/hero.png';
+import { normalizeRoleId } from '../../utils/roleAccess';
 import './Login.css';
+
+const resolveUserId = (response: any, livelihoodTrackerId: string): string => {
+  const candidate = response?.user?.staffId
+    ?? response?.user?.id
+    ?? response?.staffId
+    ?? response?.id;
+
+  if (candidate !== undefined && candidate !== null && String(candidate).trim()) {
+    return String(candidate);
+  }
+
+  return livelihoodTrackerId;
+};
 
 /* ── Stats shown on the left panel ── */
 const STATS = [
   { value: '8+',   label: 'Districts' },
-  { value: '40k+', label: 'SHG Members' },
+  { value: '12k+', label: 'CRP Records' },
   { value: '100%', label: 'Secure' },
 ];
 
@@ -38,25 +52,53 @@ const Login: React.FC = () => {
     try {
       const response = await authService.login({ livelihoodTrackerId, password });
 
-      const role = response.role ?? response.user?.role ?? '';
+      const resolvedRole = normalizeRoleId(response.role ?? response.user?.role ?? response.roleId ?? response.user?.roleId);
+      const roleId = resolvedRole;
+      const role = resolvedRole;
+      const resolvedUserId = resolveUserId(response, livelihoodTrackerId);
       const user = response.user
         ? {
-            id:    response.user.id,
+            id:    resolvedUserId,
+            staffId: response.user.staffId ? String(response.user.staffId) : response.staffId ? String(response.staffId) : resolvedUserId,
+            livelihoodTrackerId: response.user.livelihoodTrackerId ?? response.livelihoodTrackerId ?? livelihoodTrackerId,
             email: response.user.email ?? '',
             name:  response.user.name  ?? livelihoodTrackerId,
-            role:  response.user.role,
+            role,
+            roleId,
+            districtId: response.user.districtId ? String(response.user.districtId) : response.districtId ? String(response.districtId) : '',
+            blockId: response.user.blockId ? String(response.user.blockId) : response.blockId ? String(response.blockId) : '',
+            districtName: response.user.districtName ?? '',
+            blockName: response.user.blockName ?? '',
           }
-        : { id: livelihoodTrackerId, email: '', name: livelihoodTrackerId, role };
+        : {
+            id: resolvedUserId,
+            staffId: response.staffId ? String(response.staffId) : response.id ? String(response.id) : '',
+            livelihoodTrackerId,
+            email: '',
+            name: livelihoodTrackerId,
+            role,
+            roleId,
+            districtId: response.districtId ? String(response.districtId) : '',
+            blockId: response.blockId ? String(response.blockId) : '',
+            districtName: '',
+            blockName: '',
+          };
 
       localStorage.setItem('token', response.token);
-      if (role) localStorage.setItem('role', role);
+      if (roleId) localStorage.setItem('role', roleId);
 
       login(user);
       navigate('/dashboard');
     } catch (err: any) {
+      const status = err?.response?.status;
+      const detail = err?.response?.data?.detail;
+      const message = err?.response?.data?.message;
+
       setError(
-        err.response?.data?.message ||
-        'Invalid credentials. Please check your User ID and password.'
+        detail === 'Invalid credentials' ? 'Invalid credentials. Please check your User ID and password.' :
+        status === 401 ? 'Invalid credentials. Please check your User ID and password.' :
+        status >= 500 ? detail || 'Server error during sign in. Please try again in a moment.' :
+        detail || message || 'Invalid credentials. Please check your User ID and password.'
       );
     } finally {
       setLoading(false);
@@ -75,7 +117,7 @@ const Login: React.FC = () => {
             <p className="visual-tag">TRLM Operations Console</p>
             <h2 className="visual-title">
               Access district, staff,{' '}
-              <em>SHG</em>, CRP &amp; payment workflows
+              <em>CRP</em> &amp; payment workflows
             </h2>
             <p className="visual-sub">
               A secure, unified platform for Tripura Rural Livelihood Mission

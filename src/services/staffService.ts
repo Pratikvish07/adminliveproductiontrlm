@@ -1,34 +1,52 @@
 import api from './api';
 import type { PendingStaffRecord } from '../types/common.types';
+import { getWithFallback } from './requestFallback';
 
-export const staffService = {
+type StaffService = {
+  getAllUsers: () => Promise<PendingStaffRecord[]>;
+  getPendingStaff: () => Promise<PendingStaffRecord[]>;
+  getApprovedStaff: () => Promise<PendingStaffRecord[]>;
+  getRejectedStaff: () => Promise<PendingStaffRecord[]>;
+  approveStaff: (staffId: string) => Promise<unknown>;
+  rejectStaff: (staffId: string) => Promise<unknown>;
+};
+
+export const staffService: StaffService = {
   getAllUsers: async (): Promise<PendingStaffRecord[]> => {
-    const response = await api.get('/api/admin/all-users');
-    return response.data;
+    return getWithFallback<PendingStaffRecord[]>([
+      '/admin/all-users',
+      '/admin/users',
+    ]);
   },
 
   getPendingStaff: async (): Promise<PendingStaffRecord[]> => {
-    const response = await api.get('/api/admin/pending');
-    return response.data;
+    return getWithFallback<PendingStaffRecord[]>([
+      '/admin/pending',
+      '/admin/staff/pending',
+    ]);
   },
 
   getApprovedStaff: async (): Promise<PendingStaffRecord[]> => {
-    const response = await api.get('/api/admin/approved');
-    return response.data;
+    return getWithFallback<PendingStaffRecord[]>([
+      '/admin/approved',
+      '/admin/staff/approved',
+    ]);
   },
 
   getRejectedStaff: async (): Promise<PendingStaffRecord[]> => {
-    const response = await api.get('/api/admin/rejected');
-    return response.data;
+    return getWithFallback<PendingStaffRecord[]>([
+      '/admin/rejected',
+      '/admin/staff/rejected',
+    ]);
   },
 
   approveStaff: async (staffId: string) => {
-    const response = await api.post(`/api/admin/approve/${staffId}`);
+    const response = await api.post(`/admin/approve/${staffId}`);
     return response.data;
   },
 
   rejectStaff: async (staffId: string) => {
-    const response = await api.post(`/api/admin/reject/${staffId}`);
+    const response = await api.post(`/admin/reject/${staffId}`);
     return response.data;
   },
 };

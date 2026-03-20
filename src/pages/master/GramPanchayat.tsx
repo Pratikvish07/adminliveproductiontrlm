@@ -1,20 +1,30 @@
 import React from "react";
 import Loader from "../../components/common/Loader";
+import { useAuth } from "../../context/AuthContext";
 import {
   getDistricts,
   getBlocks,
   getGramPanchayats,
 } from "../../services/masterService";
 import type {
-  Block,
   District,
   GramPanchayat as GramPanchayatItem,
 } from "../../types/master.types";
+import { getUserRoleId, ROLE_IDS } from "../../utils/roleAccess";
 import "./MasterData.css";
 
+type BlockOption = {
+  blockId: number | string;
+  blockName: string;
+};
+
 const GramPanchayat: React.FC = () => {
+  const { user } = useAuth();
+  const roleId = getUserRoleId(user);
+  const isDistrictStaff = roleId === ROLE_IDS.DISTRICT_STAFF;
+  const isBlockStaff = roleId === ROLE_IDS.BLOCK_STAFF;
   const [districts, setDistricts] = React.useState<District[]>([]);
-  const [blocks, setBlocks] = React.useState<Block[]>([]);
+  const [blocks, setBlocks] = React.useState<BlockOption[]>([]);
   const [selectedDistrictId, setSelectedDistrictId] = React.useState("");
   const [selectedBlockId, setSelectedBlockId] = React.useState("");
   const [gramPanchayats, setGramPanchayats] = React.useState<GramPanchayatItem[]>([]);
@@ -29,6 +39,16 @@ const GramPanchayat: React.FC = () => {
       .catch(() => setError("Failed to load districts ❌"))
       .finally(() => setLoading(false));
   }, []);
+
+  React.useEffect(() => {
+    if (isDistrictStaff || isBlockStaff) {
+      setSelectedDistrictId(user?.districtId ? String(user.districtId) : "");
+    }
+
+    if (isBlockStaff) {
+      setSelectedBlockId(user?.blockId ? String(user.blockId) : "");
+    }
+  }, [isBlockStaff, isDistrictStaff, user?.blockId, user?.districtId]);
 
   // 🔹 Load blocks
   React.useEffect(() => {
@@ -75,29 +95,36 @@ const GramPanchayat: React.FC = () => {
 
       {/* 🔹 Filters */}
       <div className="master-filter-row">
-        <select
-          value={selectedDistrictId}
-          onChange={(e) => setSelectedDistrictId(e.target.value)}
-        >
-          <option value="">Select District</option>
-          {districts.map((d) => (
-            <option key={d.districtId} value={d.districtId}>
-              {d.districtName}
-            </option>
-          ))}
-        </select>
+        {!isBlockStaff && (
+          <select
+            value={selectedDistrictId}
+            onChange={(e) => setSelectedDistrictId(e.target.value)}
+            disabled={isDistrictStaff}
+          >
+            <option value="">{isDistrictStaff ? "Assigned District" : "Select District"}</option>
+            {districts
+              .filter((district) => roleId === ROLE_IDS.STATE_ADMIN || String(district.districtId) === String(user?.districtId))
+              .map((d) => (
+              <option key={d.districtId} value={d.districtId}>
+                {d.districtName}
+              </option>
+            ))}
+          </select>
+        )}
 
         <select
           value={selectedBlockId}
-          disabled={!selectedDistrictId || blockLoading}
+          disabled={!selectedDistrictId || blockLoading || isBlockStaff}
           onChange={(e) => setSelectedBlockId(e.target.value)}
         >
           <option value="">
-            {selectedDistrictId ? "Select Block" : "Select District First"}
+            {isBlockStaff ? "Assigned Block" : selectedDistrictId ? "Select Block" : "Select District First"}
           </option>
-          {blocks.map((b) => (
-            <option key={b.BlockId} value={b.BlockId}>
-              {b.BlockName}
+          {blocks
+            .filter((block) => !isBlockStaff || String(block.blockId) === String(user?.blockId))
+            .map((b) => (
+            <option key={b.blockId} value={b.blockId}>
+              {b.blockName}
             </option>
           ))}
         </select>

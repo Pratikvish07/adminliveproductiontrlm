@@ -32,6 +32,13 @@ const StaffTable: React.FC<StaffTableProps> = ({
     return first ? Object.keys(first) : [];
   }, [records]);
 
+  const formatColumnName = React.useCallback((column: string) => {
+    return column
+      .replace(/([A-Z])/g, ' $1')
+      .replace(/_/g, ' ')
+      .trim();
+  }, []);
+
   return (
     <section className="staff-panel">
       <div className="staff-panel-head">
@@ -54,7 +61,7 @@ const StaffTable: React.FC<StaffTableProps> = ({
             <thead>
               <tr>
                 {columns.map((column) => (
-                  <th key={column}>{column}</th>
+                  <th key={column}>{formatColumnName(column)}</th>
                 ))}
                 {(onApprove || onReject) && <th>Actions</th>}
               </tr>

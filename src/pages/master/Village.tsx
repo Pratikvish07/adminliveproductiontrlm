@@ -1,10 +1,16 @@
 import React from 'react';
 import Loader from '../../components/common/Loader';
+import { useAuth } from '../../context/AuthContext';
 import { masterService } from '../../services/masterService';
 import type { Block, District, GramPanchayat, Village as VillageItem } from '../../types/master.types';
+import { getUserRoleId, ROLE_IDS } from '../../utils/roleAccess';
 import './MasterData.css';
 
 const Village: React.FC = () => {
+  const { user } = useAuth();
+  const roleId = getUserRoleId(user);
+  const isDistrictStaff = roleId === ROLE_IDS.DISTRICT_STAFF;
+  const isBlockStaff = roleId === ROLE_IDS.BLOCK_STAFF;
   const [districts, setDistricts] = React.useState<District[]>([]);
   const [blocks, setBlocks] = React.useState<Block[]>([]);
   const [gramPanchayats, setGramPanchayats] = React.useState<GramPanchayat[]>([]);
@@ -32,6 +38,16 @@ const Village: React.FC = () => {
 
     loadDistricts();
   }, []);
+
+  React.useEffect(() => {
+    if (isDistrictStaff || isBlockStaff) {
+      setSelectedDistrictId(user?.districtId ? String(user.districtId) : '');
+    }
+
+    if (isBlockStaff) {
+      setSelectedBlockId(user?.blockId ? String(user.blockId) : '');
+    }
+  }, [isBlockStaff, isDistrictStaff, user?.blockId, user?.districtId]);
 
   React.useEffect(() => {
     const loadBlocks = async () => {
@@ -124,24 +140,29 @@ const Village: React.FC = () => {
       {error && <div className="master-alert">{error}</div>}
 
       <div className="master-filter-row master-filter-row-three">
-        <div className="master-filter-group">
-          <label htmlFor="village-district">District</label>
-          <select
-            id="village-district"
-            value={selectedDistrictId}
-            onChange={(e) => {
-              setError('');
-              setSelectedDistrictId(e.target.value);
-            }}
-          >
-            <option value="">Select district</option>
-            {districts.map((district) => (
-              <option key={district.districtId} value={district.districtId}>
-                {district.districtName}
-              </option>
-            ))}
-          </select>
-        </div>
+        {!isBlockStaff && (
+          <div className="master-filter-group">
+            <label htmlFor="village-district">District</label>
+            <select
+              id="village-district"
+              value={selectedDistrictId}
+              onChange={(e) => {
+                setError('');
+                setSelectedDistrictId(e.target.value);
+              }}
+              disabled={isDistrictStaff}
+            >
+              <option value="">{isDistrictStaff ? 'Assigned district' : 'Select district'}</option>
+              {districts
+                .filter((district) => roleId === ROLE_IDS.STATE_ADMIN || String(district.districtId) === String(user?.districtId))
+                .map((district) => (
+                <option key={district.districtId} value={district.districtId}>
+                  {district.districtName}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
         <div className="master-filter-group">
           <label htmlFor="village-block">Block</label>
           <select
@@ -151,10 +172,12 @@ const Village: React.FC = () => {
               setError('');
               setSelectedBlockId(e.target.value);
             }}
-            disabled={!selectedDistrictId || lookupLoading}
+            disabled={!selectedDistrictId || lookupLoading || isBlockStaff}
           >
-            <option value="">{selectedDistrictId ? 'Select block' : 'Select district first'}</option>
-            {blocks.map((block) => (
+            <option value="">{isBlockStaff ? 'Assigned block' : selectedDistrictId ? 'Select block' : 'Select district first'}</option>
+            {blocks
+              .filter((block) => !isBlockStaff || String(block.BlockId) === String(user?.blockId))
+              .map((block) => (
               <option key={block.BlockId} value={block.BlockId}>
                 {block.BlockName}
               </option>

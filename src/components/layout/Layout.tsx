@@ -1,25 +1,42 @@
 import React from 'react';
+import { Outlet } from 'react-router-dom';
+import { SidebarProvider, useSidebar } from '../../context/SidebarContext';
 import Navbar from './Navbar';
 import Sidebar from './Sidebar';
-import { Outlet } from 'react-router-dom';
-import { SidebarProvider } from '../../context/SidebarContext';
 
-const Layout: React.FC = () => {
+const LayoutShell: React.FC = () => {
+  const { isCollapsed, isMobileOpen, closeMobile } = useSidebar();
+
   return (
-    <SidebarProvider>
-      <div className="gov-app min-h-screen bg-[#F8FAFC]">
+    <div
+      className={[
+        'gov-app-shell',
+        isCollapsed ? 'is-collapsed' : '',
+        isMobileOpen ? 'is-mobile-open' : '',
+      ].filter(Boolean).join(' ')}
+    >
+      <Sidebar />
+      <div
+        className={`gov-sidebar-overlay${isMobileOpen ? ' is-visible' : ''}`}
+        onClick={closeMobile}
+        aria-hidden="true"
+      />
+      <div className="gov-content-shell">
         <Navbar />
-        <div className="gov-layout-body flex min-h-[calc(100vh-72px)]">
-          <Sidebar />
-          <main className="gov-main flex-1 p-6 lg:p-8 ml-[280px] transition-all duration-300 overflow-auto">
-            <div className="max-w-7xl mx-auto">
-              <Outlet />
-            </div>
-          </main>
-        </div>
+        <main className="gov-main">
+          <div className="gov-main-inner">
+            <Outlet />
+          </div>
+        </main>
       </div>
-    </SidebarProvider>
+    </div>
   );
 };
+
+const Layout: React.FC = () => (
+  <SidebarProvider>
+    <LayoutShell />
+  </SidebarProvider>
+);
 
 export default Layout;

@@ -13,7 +13,6 @@ export const ROLES = {
 export const MODULES = {
   MASTER: 'master',
   STAFF: 'staff',
-  SHG: 'shg',
   CRP: 'crp',
   PAYMENT: 'payment',
 } as const;
