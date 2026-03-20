@@ -7,12 +7,14 @@ import { SidebarProvider } from '../../context/SidebarContext';
 const Layout: React.FC = () => {
   return (
     <SidebarProvider>
-      <div className="layout">
+      <div className="gov-app min-h-screen bg-[#F8FAFC]">
         <Navbar />
-        <div className="layout-body">
+        <div className="gov-layout-body flex min-h-[calc(100vh-72px)]">
           <Sidebar />
-          <main className="layout-main">
-            <Outlet />
+          <main className="gov-main flex-1 p-6 lg:p-8 ml-[280px] transition-all duration-300 overflow-auto">
+            <div className="max-w-7xl mx-auto">
+              <Outlet />
+            </div>
           </main>
         </div>
       </div>

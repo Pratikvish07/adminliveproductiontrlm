@@ -12,6 +12,16 @@ export const staffService = {
     return response.data;
   },
 
+  getApprovedStaff: async (): Promise<PendingStaffRecord[]> => {
+    const response = await api.get('/api/admin/approved');
+    return response.data;
+  },
+
+  getRejectedStaff: async (): Promise<PendingStaffRecord[]> => {
+    const response = await api.get('/api/admin/rejected');
+    return response.data;
+  },
+
   approveStaff: async (staffId: string) => {
     const response = await api.post(`/api/admin/approve/${staffId}`);
     return response.data;

@@ -1,6 +1,7 @@
 import React from 'react';
 import Loader from '../../components/common/Loader';
-import { staffService, resolveStaffId } from '../../services/staffService';
+import { staffService } from '../../services/staffService';
+import { resolveStaffId } from './staffUtils';
 import type { PendingStaffRecord } from '../../types/common.types';
 import './StaffApproval.css';
 

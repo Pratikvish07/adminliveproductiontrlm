@@ -18,6 +18,8 @@ export const toStaffRecords = (value: unknown): StaffRecord[] => {
   return [];
 };
 
+export const resolveStaffId = (record: StaffRecord): string | null => (record as any)[resolveStaffId.name] ?? getStaffId(record);
+
 export const getStaffId = (record: StaffRecord): string | null => {
   for (const key of STAFF_ID_CANDIDATES) {
     const value = record[key];
