@@ -387,7 +387,7 @@
 .form-section {
   display: flex;
   flex-direction: column;
-  gap: 11px;
+  gap: 16px;
   position: relative;
   z-index: 1;
 }
@@ -408,7 +408,13 @@
 .field-shell {
   display: flex;
   flex-direction: column;
-  gap: 0;
+  gap: 6px;
+}
+
+.field-shell .input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 /*
@@ -427,18 +433,65 @@
 
 .field-shell input {
   width: 100%;
-  padding: 10px 13px;
-  border-radius: 9px;
+  min-height: 56px;
+  padding: 14px 16px;
+  border-radius: 14px;
   border: 1.5px solid var(--border-tan);
   background: #fff;
   font-family: 'DM Sans', sans-serif;
-  font-size: 13.5px;
+  font-size: 15px;
   font-weight: 400;
   color: var(--ink);
   outline: none;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
   -webkit-appearance: none;
   appearance: none;
+}
+
+.field-shell--password {
+  position: relative;
+}
+
+.field-shell--password input {
+  padding-right: 56px;
+}
+
+.toggle-pw {
+  position: absolute;
+  right: 14px;
+  top: 42px;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #7a8a9a;
+  font-size: 15px;
+  line-height: 1;
+}
+
+.toggle-pw:hover {
+  color: var(--navy);
+}
+
+.form-meta {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: -4px;
+}
+
+.forgot-link {
+  font-size: 13px;
+  color: #6f7f91;
+  text-decoration: none;
+}
+
+.forgot-link:hover {
+  color: var(--navy);
+  text-decoration: underline;
 }
 
 .field-shell input::placeholder {
@@ -453,8 +506,9 @@
 /* ── .login-btn  — primary CTA (rendered by <Button>) ── */
 .login-btn {
   width: 100% !important;
-  padding: 12px 16px !important;
-  border-radius: 9px !important;
+  min-height: 56px !important;
+  padding: 14px 18px !important;
+  border-radius: 14px !important;
   border: none !important;
   background: var(--navy) !important;
   color: var(--cream) !important;
