@@ -5,8 +5,24 @@ import Button from '../../components/common/Button';
 import { authService } from '../../services/authService';
 import { useAuth } from '../../context/AuthContext';
 import heroImage from '../../assets/hero.png';
+import { isLikelyScopeId } from '../../utils/helpers';
 import { normalizeRoleId } from '../../utils/roleAccess';
 import './Login.css';
+
+const getFirstValue = (record: Record<string, unknown> | undefined, keys: string[]): string => {
+  if (!record) {
+    return '';
+  }
+
+  for (const key of keys) {
+    const value = record[key];
+    if (value !== undefined && value !== null && String(value).trim() !== '') {
+      return String(value);
+    }
+  }
+
+  return '';
+};
 
 const resolveUserId = (response: any, livelihoodTrackerId: string): string => {
   const candidate = response?.user?.staffId
@@ -56,6 +72,26 @@ const Login: React.FC = () => {
       const roleId = resolvedRole;
       const role = resolvedRole;
       const resolvedUserId = resolveUserId(response, livelihoodTrackerId);
+      const responseUser = response?.user && typeof response.user === 'object'
+        ? response.user as Record<string, unknown>
+        : undefined;
+      const responseRoot = response && typeof response === 'object'
+        ? response as Record<string, unknown>
+        : undefined;
+      const resolvedDistrictId = getFirstValue(responseUser, ['districtId', 'DistrictId', 'district', 'District'])
+        || getFirstValue(responseRoot, ['districtId', 'DistrictId', 'district', 'District']);
+      const resolvedBlockId = getFirstValue(responseUser, ['blockId', 'BlockId', 'block', 'Block'])
+        || getFirstValue(responseRoot, ['blockId', 'BlockId', 'block', 'Block']);
+      const resolvedDistrictName = getFirstValue(responseUser, ['districtName', 'DistrictName'])
+        || getFirstValue(responseRoot, ['districtName', 'DistrictName']);
+      const resolvedBlockName = getFirstValue(responseUser, ['blockName', 'BlockName'])
+        || getFirstValue(responseRoot, ['blockName', 'BlockName']);
+      const normalizedDistrictId = isLikelyScopeId(resolvedDistrictId) ? resolvedDistrictId : '';
+      const normalizedBlockId = isLikelyScopeId(resolvedBlockId) ? resolvedBlockId : '';
+      const normalizedDistrictName =
+        resolvedDistrictName || (!isLikelyScopeId(resolvedDistrictId) ? resolvedDistrictId : '');
+      const normalizedBlockName =
+        resolvedBlockName || (!isLikelyScopeId(resolvedBlockId) ? resolvedBlockId : '');
       const user = response.user
         ? {
             id:    resolvedUserId,
@@ -65,10 +101,10 @@ const Login: React.FC = () => {
             name:  response.user.name  ?? livelihoodTrackerId,
             role,
             roleId,
-            districtId: response.user.districtId ? String(response.user.districtId) : response.districtId ? String(response.districtId) : '',
-            blockId: response.user.blockId ? String(response.user.blockId) : response.blockId ? String(response.blockId) : '',
-            districtName: response.user.districtName ?? '',
-            blockName: response.user.blockName ?? '',
+            districtId: normalizedDistrictId,
+            blockId: normalizedBlockId,
+            districtName: normalizedDistrictName,
+            blockName: normalizedBlockName,
           }
         : {
             id: resolvedUserId,
@@ -78,10 +114,10 @@ const Login: React.FC = () => {
             name: livelihoodTrackerId,
             role,
             roleId,
-            districtId: response.districtId ? String(response.districtId) : '',
-            blockId: response.blockId ? String(response.blockId) : '',
-            districtName: '',
-            blockName: '',
+            districtId: normalizedDistrictId,
+            blockId: normalizedBlockId,
+            districtName: normalizedDistrictName,
+            blockName: normalizedBlockName,
           };
 
       localStorage.setItem('token', response.token);

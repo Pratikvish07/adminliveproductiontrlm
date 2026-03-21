@@ -13,7 +13,7 @@ import {
   peekCachedBlocks,
 } from "../../services/masterService";
 import type { SignupBlockOption } from "../../services/masterService";
-import { getUserRoleId, ROLE_IDS } from "../../utils/roleAccess";
+import { getUserRoleId, isStaffApprovalRoleId, ROLE_IDS } from "../../utils/roleAccess";
 import "./Signup.css";
 
 /* ── Types ───────────────────────────────────────────────────── */
@@ -94,18 +94,20 @@ const Signup: React.FC = () => {
   }, [blocks, isBlockStaff, user?.blockId]);
 
   const visibleRoles = React.useMemo(() => {
+    const approvableRoles = roles.filter((role) => isStaffApprovalRoleId(role.roleId));
+
     if (isBlockStaff) {
-      return roles.filter((role) => String(role.roleId) === ROLE_IDS.BLOCK_STAFF);
+      return approvableRoles.filter((role) => String(role.roleId) === ROLE_IDS.BLOCK_STAFF);
     }
 
     if (isDistrictStaff) {
-      return roles.filter((role) => {
+      return approvableRoles.filter((role) => {
         const candidateRoleId = String(role.roleId);
-        return candidateRoleId === ROLE_IDS.DISTRICT_STAFF || candidateRoleId === ROLE_IDS.BLOCK_STAFF;
+        return candidateRoleId === ROLE_IDS.BLOCK_STAFF;
       });
     }
 
-    return roles;
+    return approvableRoles;
   }, [isBlockStaff, isDistrictStaff, roles]);
 
   /* ── Load districts + roles on mount ───────────────────────── */

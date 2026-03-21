@@ -10,12 +10,24 @@ const getNestedValue = (value: unknown): unknown => {
 
   const objectValue = value as Record<string, unknown>;
   return (
+    getNestedValue(objectValue.district) ??
+    getNestedValue(objectValue.District) ??
+    getNestedValue(objectValue.block) ??
+    getNestedValue(objectValue.Block) ??
+    getNestedValue(objectValue.districtMaster) ??
+    getNestedValue(objectValue.DistrictMaster) ??
+    getNestedValue(objectValue.blockMaster) ??
+    getNestedValue(objectValue.BlockMaster) ??
     objectValue.districtName ??
     objectValue.DistrictName ??
     objectValue.blockName ??
     objectValue.BlockName ??
     objectValue.name ??
     objectValue.Name ??
+    objectValue.label ??
+    objectValue.Label ??
+    objectValue.title ??
+    objectValue.Title ??
     objectValue.id ??
     objectValue.Id ??
     value
@@ -44,6 +56,26 @@ const normalizeText = (value: unknown, fallback = 'N/A'): string => {
 const normalizeStatus = (record: Record<string, unknown>): string => {
   const statusValue = getFirstValue(record, ['status', 'Status', 'approvalStatus', 'ApprovalStatus']);
   if (typeof statusValue === 'string' && statusValue.trim()) {
+    const normalized = statusValue.trim().toLowerCase();
+    if (normalized === '1') {
+      return 'Approved';
+    }
+    if (normalized === '2' || normalized === '-1') {
+      return 'Rejected';
+    }
+    if (normalized === '0') {
+      return 'Pending';
+    }
+    if (['approved', 'active'].includes(normalized)) {
+      return 'Approved';
+    }
+    if (['rejected', 'declined', 'inactive'].includes(normalized)) {
+      return 'Rejected';
+    }
+    if (['pending', 'submitted', 'requested', 'awaiting_approval', 'awaiting approval', 'new'].includes(normalized)) {
+      return 'Pending';
+    }
+
     return statusValue.trim();
   }
 
@@ -53,6 +85,9 @@ const normalizeStatus = (record: Record<string, unknown>): string => {
     }
     if (statusValue === 2 || statusValue === -1) {
       return 'Rejected';
+    }
+    if (statusValue === 0) {
+      return 'Pending';
     }
     return 'Pending';
   }
@@ -69,8 +104,34 @@ export function toCRPRecords(records: CRPRecord[] | PendingCRPRecord[]): CRPReco
   return records.map((record) => ({
     id: normalizeText(getFirstValue(record, ['id', 'Id', 'crpRegistrationId', 'CrpRegistrationId']), '-'),
     name: normalizeText(getFirstValue(record, ['name', 'Name', 'officialName', 'OfficialName', 'fullName', 'FullName'])),
-    district: normalizeText(getFirstValue(record, ['district', 'District', 'districtName', 'DistrictName', 'districtId', 'DistrictId'])),
-    block: normalizeText(getFirstValue(record, ['block', 'Block', 'blockName', 'BlockName', 'blockId', 'BlockId'])),
+    district: normalizeText(
+      getFirstValue(record, [
+        'district',
+        'District',
+        'districtName',
+        'DistrictName',
+        'districtMaster',
+        'DistrictMaster',
+        'districtData',
+        'DistrictData',
+        'districtId',
+        'DistrictId',
+      ]),
+    ),
+    block: normalizeText(
+      getFirstValue(record, [
+        'block',
+        'Block',
+        'blockName',
+        'BlockName',
+        'blockMaster',
+        'BlockMaster',
+        'blockData',
+        'BlockData',
+        'blockId',
+        'BlockId',
+      ]),
+    ),
     status: normalizeStatus(record),
     crpRegistrationId: normalizeText(getFirstValue(record, ['crpRegistrationId', 'CrpRegistrationId', 'id', 'Id']), '-'),
     crpId: normalizeText(getFirstValue(record, ['crpId', 'CrpId', 'lokOSId', 'LokOSId']), '-'),

@@ -16,3 +16,12 @@ export const capitalizeFirst = (str: string): string => {
   return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
 };
 
+export const isLikelyScopeId = (value: unknown): boolean => {
+  const normalized = String(value ?? '').trim();
+  if (!normalized) {
+    return false;
+  }
+
+  return /^[0-9]+$/.test(normalized);
+};
+

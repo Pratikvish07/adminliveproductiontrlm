@@ -3,6 +3,7 @@ import Loader from '../../components/common/Loader';
 import { staffService } from '../../services/staffService';
 import { getApprovalBucket, getStaffRoleLabel, resolveStaffId } from './staffUtils';
 import type { PendingStaffRecord } from '../../types/common.types';
+import { isStaffApprovalRoleId } from '../../utils/roleAccess';
 import './StaffApproval.css';
 
 type TabKey = 'pending' | 'approved' | 'rejected';
@@ -21,6 +22,11 @@ const getEmail = (staff: PendingStaffRecord): string =>
 
 const getFieldValue = (value: PendingStaffRecord[keyof PendingStaffRecord]): string =>
   String(value ?? '-');
+
+const isStaffApprovalRecord = (staff: PendingStaffRecord): boolean =>
+  isStaffApprovalRoleId(
+    staff.roleId ?? staff.RoleId ?? staff.role ?? staff.roleName ?? staff.RoleName ?? staff.userRole,
+  );
 
 const StaffApproval: React.FC = () => {
   const hasLoadedRef = React.useRef(false);
@@ -51,8 +57,8 @@ const StaffApproval: React.FC = () => {
       staffService.getAllUsers(),
     ]);
 
-    const pending = pendingRes.status === 'fulfilled' ? pendingRes.value : [];
-    const allUsers = allUsersRes.status === 'fulfilled' ? allUsersRes.value : [];
+    const pending = pendingRes.status === 'fulfilled' ? pendingRes.value.filter(isStaffApprovalRecord) : [];
+    const allUsers = allUsersRes.status === 'fulfilled' ? allUsersRes.value.filter(isStaffApprovalRecord) : [];
     const pendingIds = new Set(
       pending
         .map((staff) => resolveStaffId(staff))
@@ -191,7 +197,7 @@ const StaffApproval: React.FC = () => {
         <div>
           <p className="sa-sup">Staff Management</p>
           <h1 className="sa-title">Staff Approval</h1>
-          <p className="sa-desc">Review pending requests and approve or reject from one place.</p>
+          <p className="sa-desc">Approve or reject district and block staff registrations from one place.</p>
         </div>
 
         <div className="sa-counts">

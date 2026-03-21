@@ -58,6 +58,11 @@ export const getRoleLabel = (roleId: string): string => {
   }
 };
 
+export const isStaffApprovalRoleId = (roleId: unknown): boolean => {
+  const normalizedRoleId = normalizeRoleId(roleId);
+  return normalizedRoleId === ROLE_IDS.DISTRICT_STAFF || normalizedRoleId === ROLE_IDS.BLOCK_STAFF;
+};
+
 export const isStateAdmin = (user: User | null): boolean => getUserRoleId(user) === ROLE_IDS.STATE_ADMIN;
 export const isDistrictStaff = (user: User | null): boolean => getUserRoleId(user) === ROLE_IDS.DISTRICT_STAFF;
 export const isBlockStaff = (user: User | null): boolean => getUserRoleId(user) === ROLE_IDS.BLOCK_STAFF;

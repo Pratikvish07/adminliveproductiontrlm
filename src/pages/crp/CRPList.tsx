@@ -1,99 +1,102 @@
 import React from 'react';
-import Loader from '../../components/common/Loader';
-import { useAuth } from '../../context/AuthContext';
-import { crpService } from '../../services/crpService';
 import CRPTable from './CRPTable';
-import { toCRPRecords } from './crpUtils';
-import { filterByDistrictAndBlock, getUserRoleId, ROLE_IDS } from '../../utils/roleAccess';
-import { useResolvedScope } from '../../utils/useResolvedScope';
 import './CRPList.css';
 
+const staticRecords = [
+  {
+    id: '5',
+    name: 'Ravi Mathur',
+    district: 'Dhalai',
+    block: 'Ambassa',
+    status: 'Approved',
+    crpRegistrationId: '5',
+    crpId: 'CRP-0001',
+    fullName: 'Ravi Mathur',
+    aadhaarNo: '676866069696',
+  },
+  {
+    id: '6',
+    name: 'Anita Reang',
+    district: 'Gomati',
+    block: 'Amarpur',
+    status: 'Pending',
+    crpRegistrationId: '6',
+    crpId: 'CRP-0002',
+    fullName: 'Anita Reang',
+    aadhaarNo: '547812349876',
+  },
+];
+
 const CRPList: React.FC = () => {
-  const { user } = useAuth();
-  const { scopedUser } = useResolvedScope(user);
-  const roleId = getUserRoleId(scopedUser);
-  const scopeKey = React.useMemo(
-    () => [
-      scopedUser?.roleId ?? scopedUser?.role ?? '',
-      scopedUser?.districtId ?? '',
-      scopedUser?.districtName ?? '',
-      scopedUser?.blockId ?? '',
-      scopedUser?.blockName ?? '',
-    ].join('|'),
-    [scopedUser],
-  );
-  const [records, setRecords] = React.useState<any[]>([]);
-  const [totalCRPCount, setTotalCRPCount] = React.useState(0);
-  const [loading, setLoading] = React.useState(true);
-  const [error, setError] = React.useState('');
-
-  const loadCRPData = React.useCallback(async () => {
-    try {
-      setLoading(true);
-      setError('');
-      const response =
-        roleId === ROLE_IDS.DISTRICT_STAFF && scopedUser?.districtId
-          ? await crpService.getCRPByDistrict(String(scopedUser.districtId))
-          : roleId === ROLE_IDS.BLOCK_STAFF && scopedUser?.blockId
-            ? await crpService.getCRPByBlock(String(scopedUser.blockId))
-            : await crpService.getCRPList();
-      const scopedRecords = filterByDistrictAndBlock(
-        response,
-        scopedUser,
-        ['districtId', 'district', 'districtName', 'DistrictId', 'District', 'DistrictName'],
-        ['blockId', 'block', 'blockName', 'BlockId', 'Block', 'BlockName'],
-      );
-      const processed = toCRPRecords(scopedRecords);
-      setTotalCRPCount(Array.isArray(response) ? response.length : 0);
-      setRecords(processed);
-    } catch (err) {
-      console.error('Failed to load CRP list', err);
-      setError('Unable to load CRP list right now.');
-      setRecords([]);
-      setTotalCRPCount(0);
-    } finally {
-      setLoading(false);
-    }
-  }, [roleId, scopedUser]);
-
-  React.useEffect(() => {
-    void loadCRPData();
-  }, [loadCRPData, scopeKey]);
-
-  if (loading) return <Loader />;
+  const featuredCRP = {
+    image: '/assets/logo.jpg',
+    name: 'Ravi Mathur',
+    district: 'Dhalai',
+    block: 'Ambassa',
+    gramPanchayat: 'Jagannathpur VC',
+    village: 'Surendra Para North Part',
+    shgAssigned: '14',
+    lokosId: 'CRP-0001',
+    aadhaarNo: '676866069696',
+    mobileNumber: '9109220580',
+    latitude: '23.8356',
+    longitude: '91.2868',
+  };
 
   return (
     <div className="crp-page">
       <div className="page-header">
         <span className="page-kicker">CRP Management</span>
         <h1 className="page-title">CRP List</h1>
-        <p className="page-subtitle">Monitor all CRP status, review field coverage, and keep records audit-ready.</p>
+        <p className="page-subtitle">Static CRP management overview for profile monitoring and review.</p>
       </div>
-
-      {error && <div className="gov-alert gov-alert-error">{error}</div>}
 
       <div className="crp-summary-grid">
         <div className="crp-overview-card crp-overview-card--primary">
           <span className="crp-overview-label">Community Resource Persons</span>
-          <strong>{records.length}</strong>
-          <p>Visible CRP records after role-based filtering.</p>
+          <strong>{staticRecords.length}</strong>
+          <p>Static management records prepared for the current portal preview.</p>
         </div>
         <div className="crp-overview-card">
-          <span className="crp-overview-label">Total CRP API Count</span>
-          <strong>{totalCRPCount}</strong>
-          <p>Total records returned from the active CRP API before scope filtering.</p>
+          <span className="crp-overview-label">Management Mode</span>
+          <strong>Static</strong>
+          <p>CRP Management is intentionally using fixed demo content for now.</p>
         </div>
       </div>
 
+      <section className="crp-profile-layout">
+        <article className="crp-profile-card">
+          <div className="crp-profile-head">
+            <img src={featuredCRP.image} alt={featuredCRP.name} className="crp-profile-image" />
+            <div>
+              <span className="crp-profile-kicker">CRP Management</span>
+              <h2>{featuredCRP.name}</h2>
+              <p>Profile card for management monitoring and document verification.</p>
+            </div>
+          </div>
+          <div className="crp-detail-grid">
+            <div className="crp-detail-item"><span>District</span><strong>{featuredCRP.district}</strong></div>
+            <div className="crp-detail-item"><span>Block</span><strong>{featuredCRP.block}</strong></div>
+            <div className="crp-detail-item"><span>Gram Panchayat</span><strong>{featuredCRP.gramPanchayat}</strong></div>
+            <div className="crp-detail-item"><span>Village</span><strong>{featuredCRP.village}</strong></div>
+            <div className="crp-detail-item"><span>No. of SHG Assigned</span><strong>{featuredCRP.shgAssigned}</strong></div>
+            <div className="crp-detail-item"><span>LokOS ID</span><strong>{featuredCRP.lokosId}</strong></div>
+            <div className="crp-detail-item"><span>Aadhaar Card</span><strong>{featuredCRP.aadhaarNo}</strong></div>
+            <div className="crp-detail-item"><span>Mobile Number</span><strong>{featuredCRP.mobileNumber}</strong></div>
+            <div className="crp-detail-item"><span>Latitude</span><strong>{featuredCRP.latitude}</strong></div>
+            <div className="crp-detail-item"><span>Longitude</span><strong>{featuredCRP.longitude}</strong></div>
+          </div>
+        </article>
+      </section>
+
       <CRPTable
         title="CRP Records"
-        description="All Community Resource Persons"
-        records={records}
-        error={error}
+        description="Static Community Resource Person records"
+        records={staticRecords}
         emptyMessage="No CRP records found."
         canApprove={false}
-        approvingId={''}
-        rejectingId={''}
+        approvingId=""
+        rejectingId=""
       />
     </div>
   );

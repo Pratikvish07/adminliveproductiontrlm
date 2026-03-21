@@ -4,6 +4,7 @@ import { crpService } from '../../services/crpService';
 import { useAuth } from '../../context/AuthContext';
 import { toCRPRecords } from './crpUtils';
 import CRPTable from './CRPTable';
+import { isLikelyScopeId } from '../../utils/helpers';
 import { filterByDistrictAndBlock, getUserRoleId, ROLE_IDS } from '../../utils/roleAccess';
 import { useResolvedScope } from '../../utils/useResolvedScope';
 import './CRP.css';
@@ -11,16 +12,20 @@ import './CRP.css';
 type StatusFilter = 'pending' | 'approved' | 'rejected';
 
 const resolveApproverId = (user: ReturnType<typeof useAuth>['user']): string | undefined => {
-  const candidate = user?.staffId || user?.id;
-  if (!candidate) {
-    return undefined;
+  const candidates = [user?.staffId, user?.id];
+
+  for (const candidate of candidates) {
+    if (candidate === undefined || candidate === null) {
+      continue;
+    }
+
+    const normalized = String(candidate).trim();
+    if (/^\d+$/.test(normalized)) {
+      return normalized;
+    }
   }
 
-  if (user?.livelihoodTrackerId && String(candidate) === String(user.livelihoodTrackerId)) {
-    return undefined;
-  }
-
-  return candidate;
+  return undefined;
 };
 
 const getBackendErrorMessage = (err: any): string => {
@@ -34,9 +39,9 @@ const getBackendErrorMessage = (err: any): string => {
 
 const CRPApproval: React.FC = () => {
   const { user } = useAuth();
-  const roleId = getUserRoleId(user);
-  const isBlockRole = roleId === ROLE_IDS.BLOCK_STAFF;
   const { scopedUser } = useResolvedScope(user);
+  const roleId = getUserRoleId(scopedUser ?? user);
+  const isBlockRole = roleId === ROLE_IDS.BLOCK_STAFF;
   const scopeKey = React.useMemo(
     () => [
       scopedUser?.roleId ?? scopedUser?.role ?? '',
@@ -59,28 +64,48 @@ const CRPApproval: React.FC = () => {
     try {
       setLoading(true);
       setError('');
-      const response =
-        roleId === ROLE_IDS.DISTRICT_STAFF && scopedUser?.districtId
-          ? await crpService.getCRPByDistrict(String(scopedUser.districtId))
-          : roleId === ROLE_IDS.BLOCK_STAFF && scopedUser?.blockId
-            ? await crpService.getCRPByBlock(String(scopedUser.blockId))
-            : await crpService.getCRPList();
-      const scopedRecords = filterByDistrictAndBlock(
-        response,
-        scopedUser,
-        ['districtId', 'district', 'districtName', 'DistrictId', 'District', 'DistrictName'],
-        ['blockId', 'block', 'blockName', 'BlockId', 'Block', 'BlockName'],
-      );
+      let response: any[] = [];
+      const resolvedDistrictId = isLikelyScopeId(scopedUser?.districtId)
+        ? String(scopedUser?.districtId)
+        : isLikelyScopeId(user?.districtId)
+          ? String(user?.districtId)
+          : '';
+
+      if (roleId === ROLE_IDS.DISTRICT_STAFF) {
+        if (!resolvedDistrictId) {
+          setError('District scope is missing for this user.');
+          setRecords([]);
+          return;
+        }
+        response = await crpService.getCRPByDistrict(resolvedDistrictId);
+      } else if (roleId === ROLE_IDS.BLOCK_STAFF) {
+        response = await crpService.getCRPList();
+      } else {
+        response = await crpService.getCRPList();
+      }
+
+      const scopedRecords = roleId === ROLE_IDS.STATE_ADMIN
+        ? filterByDistrictAndBlock(
+            response,
+            scopedUser,
+            ['districtId', 'district', 'districtName', 'DistrictId', 'District', 'DistrictName'],
+            ['blockId', 'block', 'blockName', 'BlockId', 'Block', 'BlockName'],
+          )
+        : response;
       const processed = toCRPRecords(scopedRecords);
       setRecords(processed);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to load CRP records', err);
-      setError('Unable to load CRP approval records right now.');
+      if (err?.response?.status === 401) {
+        setError('Your session is not authorized for this CRP approval data. Please sign in again.');
+      } else {
+        setError('Unable to load CRP approval records right now.');
+      }
       setRecords([]);
     } finally {
       setLoading(false);
     }
-  }, [scopedUser]);
+  }, [roleId, scopedUser, user?.blockId, user?.districtId]);
 
   React.useEffect(() => {
     void loadCRPData();
@@ -151,7 +176,7 @@ const CRPApproval: React.FC = () => {
   };
 
   const filteredRecords = React.useMemo(() => {
-    return records.filter((record) => {
+    const matchedRecords = records.filter((record) => {
       const status = String(record.status || '').toLowerCase();
       if (activeStatus === 'approved') {
         return status === 'approved';
@@ -161,6 +186,12 @@ const CRPApproval: React.FC = () => {
       }
       return status === 'pending' || status.includes('pending') || status === '';
     });
+
+    if (activeStatus === 'pending' && matchedRecords.length === 0 && records.length > 0) {
+      return records;
+    }
+
+    return matchedRecords;
   }, [activeStatus, records]);
 
   if (loading) return <Loader />;

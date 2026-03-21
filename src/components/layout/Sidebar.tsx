@@ -10,10 +10,27 @@ import {
   Map,
   ShieldCheck,
   Settings,
+  Users,
 } from 'lucide-react';
 import { useSidebar } from '../../context/SidebarContext';
 import { useAuth } from '../../context/AuthContext';
 import { getRoleLabel, isBlockStaff, isDistrictStaff, isStateAdmin } from '../../utils/roleAccess';
+
+const CRP_NAV_ITEMS = {
+  admin: [
+    { path: '/crp/list', label: 'CRP Management', icon: Map },
+    { path: '/crp/tracking', label: 'CRP Tracking', icon: ShieldCheck },
+  ],
+  district: [
+    { path: '/crp/list', label: 'CRP Management', icon: Map },
+    { path: '/crp/tracking', label: 'CRP Tracking', icon: ShieldCheck },
+  ],
+  block: [
+    { path: '/crp/approval', label: 'CRP Approval', icon: ShieldCheck },
+    { path: '/crp/list', label: 'CRP Management', icon: Map },
+    { path: '/crp/tracking', label: 'CRP Tracking', icon: ShieldCheck },
+  ],
+} as const;
 
 const Sidebar: React.FC = () => {
   const location = useLocation();
@@ -34,9 +51,10 @@ const Sidebar: React.FC = () => {
           label: 'Administration',
           items: [
             { path: '/staff/approval', label: 'Staff Approval', icon: ShieldCheck },
+            { path: '/staff/users', label: 'All Users', icon: Users },
             { path: '/master/district', label: 'District Management', icon: Building2 },
             { path: '/master/block', label: 'Block Management', icon: Building2 },
-            { path: '/crp/list', label: 'CRP Management', icon: Map },
+            ...CRP_NAV_ITEMS.admin,
             { path: '/reports', label: 'Reports', icon: BarChart3 },
             { path: '/settings', label: 'Settings', icon: Settings },
           ],
@@ -57,8 +75,7 @@ const Sidebar: React.FC = () => {
             { path: '/master/filter', label: 'Master Filter', icon: Building2 },
             { path: '/master/village', label: 'Village Monitoring', icon: Map },
             { path: '/master/gram-panchayat', label: 'GP Monitoring', icon: Map },
-            { path: '/crp/list', label: 'CRP Management', icon: Map },
-            { path: '/crp/tracking', label: 'CRP Tracking', icon: ShieldCheck },
+            ...CRP_NAV_ITEMS.district,
             { path: '/reports', label: 'Reports', icon: BarChart3 },
           ],
         },
@@ -76,9 +93,7 @@ const Sidebar: React.FC = () => {
           items: [
             { path: '/master/village', label: 'Village Monitoring', icon: Map },
             { path: '/master/gram-panchayat', label: 'GP Monitoring', icon: Map },
-            { path: '/crp/approval', label: 'CRP Approval', icon: ShieldCheck },
-            { path: '/crp/list', label: 'CRP Management', icon: Map },
-            { path: '/crp/tracking', label: 'CRP Tracking', icon: ShieldCheck },
+            ...CRP_NAV_ITEMS.block,
           ],
         },
       ];
@@ -93,10 +108,10 @@ const Sidebar: React.FC = () => {
         label: 'Administration',
         items: [
           { path: '/staff/approval', label: 'Staff Approval', icon: ShieldCheck },
+          { path: '/staff/users', label: 'All Users', icon: Users },
           { path: '/master/district', label: 'District Management', icon: Building2 },
           { path: '/master/block', label: 'Block Management', icon: Building2 },
-          { path: '/crp/approval', label: 'CRP Approval', icon: ShieldCheck },
-          { path: '/crp/list', label: 'CRP Management', icon: Map },
+          ...CRP_NAV_ITEMS.block,
           { path: '/reports', label: 'Reports', icon: BarChart3 },
           { path: '/settings', label: 'Settings', icon: Settings },
         ],
