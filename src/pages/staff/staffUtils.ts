@@ -48,8 +48,23 @@ export const isApprovalPending = (record: StaffRecord): boolean => {
       return !value;
     }
 
+    if (typeof value === 'number') {
+      if (value === 0) {
+        return true;
+      }
+      if (value === 1 || value === 2) {
+        return false;
+      }
+    }
+
     if (typeof value === 'string') {
       const normalized = value.trim().toLowerCase();
+      if (['0'].includes(normalized)) {
+        return true;
+      }
+      if (['1', '2'].includes(normalized)) {
+        return false;
+      }
       if (['pending', 'submitted', 'requested', 'awaiting_approval'].includes(normalized)) {
         return true;
       }
@@ -80,8 +95,29 @@ export const getApprovalBucket = (record: StaffRecord): ApprovalBucket => {
       return value ? 'approved' : 'pending';
     }
 
+    if (typeof value === 'number') {
+      if (value === 0) {
+        return 'pending';
+      }
+      if (value === 1) {
+        return 'approved';
+      }
+      if (value === 2) {
+        return 'rejected';
+      }
+    }
+
     if (typeof value === 'string') {
       const normalized = value.trim().toLowerCase();
+      if (normalized === '0') {
+        return 'pending';
+      }
+      if (normalized === '1') {
+        return 'approved';
+      }
+      if (normalized === '2') {
+        return 'rejected';
+      }
       if (['pending', 'submitted', 'requested', 'awaiting_approval'].includes(normalized)) {
         return 'pending';
       }

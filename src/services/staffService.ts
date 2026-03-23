@@ -11,12 +11,12 @@ type StaffService = {
   rejectStaff: (staffId: string) => Promise<unknown>;
 };
 
+const ALL_USERS_API_URL = 'https://trlm.pickitover.com/api/api/admin/all-users';
+
 export const staffService: StaffService = {
   getAllUsers: async (): Promise<PendingStaffRecord[]> => {
-    return getWithFallback<PendingStaffRecord[]>([
-      '/admin/all-users',
-      '/admin/users',
-    ]);
+    const response = await api.get<PendingStaffRecord[]>(ALL_USERS_API_URL);
+    return response.data;
   },
 
   getPendingStaff: async (): Promise<PendingStaffRecord[]> => {

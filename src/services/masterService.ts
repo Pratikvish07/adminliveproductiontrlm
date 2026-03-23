@@ -16,6 +16,7 @@ const MASTER_CACHE_TTL_MS = 30 * 60 * 1000;
 const DISTRICTS_CACHE_KEY = 'trlm_master_districts_v1';
 const ROLES_CACHE_KEY = 'trlm_master_roles_v1';
 const BLOCKS_CACHE_PREFIX = 'trlm_master_blocks_v1';
+const DASHBOARD_COUNTS_API_URL = 'https://trlm.pickitover.com/api/api/master/dashboard-counts';
 
 type CachedValue<T> = {
   data: T;
@@ -213,7 +214,7 @@ export const getGramPanchayats = async (blockId: number | string): Promise<GramP
 };
 
 export const getDashboardCounts = async (): Promise<DashboardCount[]> => {
-  const response = await api.get('/master/dashboard-counts');
+  const response = await api.get(DASHBOARD_COUNTS_API_URL);
   return Array.isArray(response.data) ? response.data as DashboardCount[] : [];
 };
 

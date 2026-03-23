@@ -1,6 +1,6 @@
 import React from 'react';
-import type { CRPRecordProcessed } from './crpUtils';
-import { formatCRPValue, getCRPid } from './crpUtils';
+import type { CRPRecordProcessed } from './crpUtils-clean';
+import { formatCRPValue, getCRPid } from './crpUtils-clean';
 import './CRP.css';
 
 type CRPTableProps = {

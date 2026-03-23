@@ -2,7 +2,6 @@ import React from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
   BarChart3,
-  Building2,
   ChevronLeft,
   ChevronRight,
   LayoutDashboard,
@@ -52,8 +51,6 @@ const Sidebar: React.FC = () => {
           items: [
             { path: '/staff/approval', label: 'Staff Approval', icon: ShieldCheck },
             { path: '/staff/users', label: 'All Users', icon: Users },
-            { path: '/master/district', label: 'District Management', icon: Building2 },
-            { path: '/master/block', label: 'Block Management', icon: Building2 },
             ...CRP_NAV_ITEMS.admin,
             { path: '/reports', label: 'Reports', icon: BarChart3 },
             { path: '/settings', label: 'Settings', icon: Settings },
@@ -71,8 +68,6 @@ const Sidebar: React.FC = () => {
         {
           label: 'Management',
           items: [
-            { path: '/master/block', label: 'Block Management', icon: Building2 },
-            { path: '/master/filter', label: 'Master Filter', icon: Building2 },
             { path: '/master/village', label: 'Village Monitoring', icon: Map },
             { path: '/master/gram-panchayat', label: 'GP Monitoring', icon: Map },
             ...CRP_NAV_ITEMS.district,
@@ -109,8 +104,6 @@ const Sidebar: React.FC = () => {
         items: [
           { path: '/staff/approval', label: 'Staff Approval', icon: ShieldCheck },
           { path: '/staff/users', label: 'All Users', icon: Users },
-          { path: '/master/district', label: 'District Management', icon: Building2 },
-          { path: '/master/block', label: 'Block Management', icon: Building2 },
           ...CRP_NAV_ITEMS.block,
           { path: '/reports', label: 'Reports', icon: BarChart3 },
           { path: '/settings', label: 'Settings', icon: Settings },

@@ -5,12 +5,8 @@ import Layout from '../components/layout/Layout';
 import Login from '../pages/auth/Login';
 import Signup from '../pages/auth/Signup';
 import Dashboard from '../pages/dashboard/Dashboard';
-// Master
-import District from '../pages/master/District.tsx';
-import Block from '../pages/master/Block';
 import Village from '../pages/master/Village';
 import GramPanchayat from '../pages/master/GramPanchayat';
-import MasterFilter from '../pages/master/MasterFilter';
 // Staff
 import AllUsers from '../pages/staff/AllUsers';
 import StaffApproval from '../pages/staff/StaffApproval';
@@ -42,24 +38,12 @@ const AppRoutes: React.FC = () => {
         <Route path="/dashboard" element={<Dashboard />} />
         {/* Master */}
         <Route
-          path="/master/district"
-          element={<ProtectedRoute allowedRoles={[ROLE_IDS.STATE_ADMIN]}><District /></ProtectedRoute>}
-        />
-        <Route
-          path="/master/block"
-          element={<ProtectedRoute allowedRoles={[ROLE_IDS.STATE_ADMIN, ROLE_IDS.DISTRICT_STAFF]}><Block /></ProtectedRoute>}
-        />
-        <Route
           path="/master/village"
           element={<ProtectedRoute allowedRoles={[ROLE_IDS.STATE_ADMIN, ROLE_IDS.DISTRICT_STAFF, ROLE_IDS.BLOCK_STAFF]}><Village /></ProtectedRoute>}
         />
         <Route
           path="/master/gram-panchayat"
           element={<ProtectedRoute allowedRoles={[ROLE_IDS.STATE_ADMIN, ROLE_IDS.DISTRICT_STAFF, ROLE_IDS.BLOCK_STAFF]}><GramPanchayat /></ProtectedRoute>}
-        />
-        <Route
-          path="/master/filter"
-          element={<ProtectedRoute allowedRoles={[ROLE_IDS.STATE_ADMIN, ROLE_IDS.DISTRICT_STAFF]}><MasterFilter /></ProtectedRoute>}
         />
         {/* Staff */}
         <Route

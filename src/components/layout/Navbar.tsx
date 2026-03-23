@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { Bell, ChevronDown, LogOut, Menu } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useSidebar } from '../../context/SidebarContext';
+import { getRoleLabel } from '../../utils/roleAccess';
 
 const Navbar: React.FC = () => {
   const { user, logout } = useAuth();
@@ -22,11 +23,8 @@ const Navbar: React.FC = () => {
       { match: '/payment/loan-tracking', title: 'Loan Tracking', subtitle: 'Monitor disbursement and repayment flow.' },
       { match: '/payment/loan-approval', title: 'Loan Approval', subtitle: 'Review loan approvals waiting for action.' },
       { match: '/payment/payments', title: 'Payments', subtitle: 'Check payment records and status updates.' },
-      { match: '/master/district', title: 'Districts', subtitle: 'Manage district-level master data.' },
-      { match: '/master/block', title: 'Blocks', subtitle: 'Browse and maintain block master data.' },
       { match: '/master/gram-panchayat', title: 'Gram Panchayats', subtitle: 'View gram panchayat master records.' },
       { match: '/master/village', title: 'Villages', subtitle: 'Navigate village-level master data.' },
-      { match: '/master/filter', title: 'Master Filter', subtitle: 'Jump quickly to master data sections.' },
     ];
 
     return routes.find((route) => location.pathname.startsWith(route.match)) ?? {
@@ -40,7 +38,14 @@ const Navbar: React.FC = () => {
     navigate('/login');
   };
 
-  const userInitial = user?.name ? user.name.charAt(0).toUpperCase() : '?';
+  const displayName = user?.name || user?.livelihoodTrackerId || 'Admin';
+  const roleLabel = getRoleLabel(user?.roleId || user?.role || '');
+  const userInitials = displayName
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join('') || '?';
 
   return (
     <header className="gov-navbar">
@@ -71,24 +76,44 @@ const Navbar: React.FC = () => {
             className="gov-navbar__user-trigger"
             onClick={() => setUserMenuOpen((current) => !current)}
             type="button"
+            aria-expanded={userMenuOpen}
+            aria-label="Open profile menu"
           >
-            <div className="gov-navbar__avatar">{userInitial}</div>
-            <div className="gov-navbar__user-copy">
-              <p>{user?.name || 'Admin'}</p>
-              <span>{user?.role || 'Administrator'}</span>
+            <div className="gov-navbar__avatar-wrap">
+              <div className="gov-navbar__avatar">{userInitials}</div>
+              <span className="gov-navbar__avatar-status" aria-hidden="true" />
             </div>
-            <ChevronDown size={16} />
+            <div className="gov-navbar__user-copy">
+              <p>{displayName}</p>
+              <span>{user?.livelihoodTrackerId || roleLabel || 'Administrator'}</span>
+            </div>
+            <ChevronDown size={16} className={`gov-navbar__chevron${userMenuOpen ? ' is-open' : ''}`} />
           </button>
 
           {userMenuOpen && (
             <div className="gov-navbar__dropdown">
               <div className="gov-navbar__dropdown-head">
-                <p>{user?.name || 'Admin User'}</p>
-                <span>{user?.email || 'admin@trlm.gov.in'}</span>
+                <div className="gov-navbar__dropdown-profile">
+                  <div className="gov-navbar__dropdown-avatar">{userInitials}</div>
+                  <div className="gov-navbar__dropdown-identity">
+                    <p>{displayName}</p>
+                    <span>{user?.email || 'admin@trlm.gov.in'}</span>
+                  </div>
+                </div>
+                <div className="gov-navbar__dropdown-meta">
+                  <div className="gov-navbar__dropdown-meta-item">
+                    <label>Role</label>
+                    <strong>{roleLabel || 'Administrator'}</strong>
+                  </div>
+                  <div className="gov-navbar__dropdown-meta-item">
+                    <label>Tracker ID</label>
+                    <strong>{user?.livelihoodTrackerId || user?.id || '-'}</strong>
+                  </div>
+                </div>
               </div>
               <button className="gov-navbar__dropdown-item" onClick={handleLogout} type="button">
                 <LogOut size={18} />
-                Sign Out
+                <span>Sign Out</span>
               </button>
             </div>
           )}

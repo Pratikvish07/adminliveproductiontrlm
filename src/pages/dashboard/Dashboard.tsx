@@ -13,9 +13,21 @@ const FALLBACK_COUNTS = [
   { title: 'Villages', totalCount: 11198 },
 ];
 
+type DashboardCountItem = {
+  title: string;
+  totalCount: number;
+};
+
 type DashboardCache = {
-  counts: Array<{ title: string; totalCount: number }>;
+  counts: DashboardCountItem[];
   cachedAt: number;
+};
+
+const METRIC_ACCENTS: Record<string, string> = {
+  Blocks: '#0f4c81',
+  Districts: '#1f78b4',
+  'Gram Panchayats': '#f29f05',
+  Villages: '#e15759',
 };
 
 const readDashboardCache = (): DashboardCache | null => {
@@ -41,24 +53,39 @@ const readDashboardCache = (): DashboardCache | null => {
   }
 };
 
+const formatNumber = (value: number): string => new Intl.NumberFormat('en-IN').format(value);
+
+const buildScopedCounts = (
+  rawCounts: Array<{ Title: string; TotalCount: number }>,
+  roleId: string | undefined,
+): DashboardCountItem[] => {
+  if (roleId === ROLE_IDS.STATE_ADMIN) {
+    return rawCounts.map((item) => ({ title: item.Title, totalCount: item.TotalCount }));
+  }
+
+  return rawCounts
+    .filter((item) => item.Title === 'Districts')
+    .map((item) => ({ title: item.Title, totalCount: 1 }));
+};
+
+const getLastUpdatedText = (cachedAt: number): string => {
+  const diffMs = Date.now() - cachedAt;
+  const diffMinutes = Math.max(0, Math.floor(diffMs / 60000));
+  return diffMinutes === 0 ? 'Updated just now' : `Updated ${diffMinutes} min ago`;
+};
+
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
   const roleId = getUserRoleId(user);
   const hasLoadedRef = React.useRef(false);
   const cachedDashboard = React.useMemo(() => readDashboardCache(), []);
-  const [counts, setCounts] = React.useState<Array<{ title: string; totalCount: number }>>(cachedDashboard?.counts ?? []);
+  const [counts, setCounts] = React.useState<DashboardCountItem[]>(cachedDashboard?.counts ?? []);
   const [error, setError] = React.useState('');
   const [loading, setLoading] = React.useState(!cachedDashboard);
   const [isRefreshing, setIsRefreshing] = React.useState(false);
-  const [lastUpdatedText, setLastUpdatedText] = React.useState(() => {
-    if (!cachedDashboard) {
-      return '';
-    }
-
-    const diffMs = Date.now() - cachedDashboard.cachedAt;
-    const diffMinutes = Math.max(0, Math.floor(diffMs / 60000));
-    return diffMinutes === 0 ? 'Updated just now' : `Updated ${diffMinutes} min ago`;
-  });
+  const [lastUpdatedText, setLastUpdatedText] = React.useState(
+    cachedDashboard ? getLastUpdatedText(cachedDashboard.cachedAt) : '',
+  );
 
   React.useEffect(() => {
     if (hasLoadedRef.current) {
@@ -67,12 +94,6 @@ const Dashboard: React.FC = () => {
 
     hasLoadedRef.current = true;
     let cancelled = false;
-
-    const updateLastUpdatedText = (cachedAt: number) => {
-      const diffMs = Date.now() - cachedAt;
-      const diffMinutes = Math.max(0, Math.floor(diffMs / 60000));
-      setLastUpdatedText(diffMinutes === 0 ? 'Updated just now' : `Updated ${diffMinutes} min ago`);
-    };
 
     const loadDashboard = async () => {
       try {
@@ -84,14 +105,8 @@ const Dashboard: React.FC = () => {
           return;
         }
 
-        const scopedCounts = roleId === ROLE_IDS.STATE_ADMIN
-          ? countResult.map((item) => ({ title: item.Title, totalCount: item.TotalCount }))
-          : countResult
-              .filter((item) => item.Title === 'Districts')
-              .map((item) => ({ title: item.Title, totalCount: 1 }));
-
+        const scopedCounts = buildScopedCounts(countResult, roleId);
         setCounts(scopedCounts);
-
         setError('');
 
         const cache: DashboardCache = {
@@ -99,18 +114,24 @@ const Dashboard: React.FC = () => {
           cachedAt: Date.now(),
         };
         localStorage.setItem(DASHBOARD_CACHE_KEY, JSON.stringify(cache));
-        updateLastUpdatedText(cache.cachedAt);
+        setLastUpdatedText(getLastUpdatedText(cache.cachedAt));
       } catch (err) {
         console.error('Failed to load dashboard counts', err);
+
+        if (cancelled) {
+          return;
+        }
+
         if (counts.length === 0) {
           const fallbackCounts = roleId === ROLE_IDS.STATE_ADMIN
             ? FALLBACK_COUNTS
             : FALLBACK_COUNTS
-                .filter((item) => item.title === 'Districts')
-                .map((item) => ({ title: item.title, totalCount: 1 }));
+              .filter((item) => item.title === 'Districts')
+              .map((item) => ({ title: item.title, totalCount: 1 }));
           setCounts(fallbackCounts);
-          setError('Live dashboard counts are unavailable right now, so cached portal totals are being shown.');
         }
+
+        setError('Live dashboard feed is temporarily unavailable, so fallback counts are being rendered.');
       } finally {
         if (!cancelled) {
           setLoading(false);
@@ -124,126 +145,204 @@ const Dashboard: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [counts.length, roleId, user?.districtId]);
+  }, [counts.length, roleId]);
 
-  const stateAdminCounts = React.useMemo(() => {
-    const byTitle = new Map(counts.map((item) => [item.title, item.totalCount]));
-    return [
-      { eyebrow: 'Master Data', title: 'Blocks', value: byTitle.get('Blocks') ?? 0, description: 'Total configured blocks available in the system.' },
-      { eyebrow: 'Master Data', title: 'Districts', value: byTitle.get('Districts') ?? 0, description: 'Total districts available for administration.' },
-      { eyebrow: 'Master Data', title: 'Gram Panchayats', value: byTitle.get('Gram Panchayats') ?? 0, description: 'Total gram panchayat records currently registered.' },
-      { eyebrow: 'Master Data', title: 'Villages', value: byTitle.get('Villages') ?? 0, description: 'Total villages available in the master-data hierarchy.' },
-    ];
-  }, [counts]);
+  const visualCounts = React.useMemo(() => {
+    if (counts.length > 0) {
+      return counts;
+    }
+
+    return roleId === ROLE_IDS.STATE_ADMIN
+      ? FALLBACK_COUNTS
+      : [{ title: 'Districts', totalCount: 1 }];
+  }, [counts, roleId]);
+
+  const maxValue = React.useMemo(
+    () => Math.max(...visualCounts.map((item) => item.totalCount), 1),
+    [visualCounts],
+  );
+
+  const totalValue = React.useMemo(
+    () => visualCounts.reduce((sum, item) => sum + item.totalCount, 0),
+    [visualCounts],
+  );
+
+  const chartPoints = React.useMemo(() => {
+    if (visualCounts.length === 1) {
+      return '20,88 280,24';
+    }
+
+    return visualCounts
+      .map((item, index) => {
+        const x = 20 + (260 / (visualCounts.length - 1)) * index;
+        const y = 88 - (item.totalCount / maxValue) * 64;
+        return `${x},${y}`;
+      })
+      .join(' ');
+  }, [maxValue, visualCounts]);
 
   return (
     <div className="dashboard-page">
-      <div className="dashboard-header">
-        <div>
-          <p className="dashboard-kicker">TRLM Overview</p>
-          <h1>Admin Dashboard</h1>
+      <section className="dashboard-hero">
+        <div className="dashboard-hero-copy">
+          <p className="dashboard-kicker">TRLM Admin Visual Console</p>
+          <h1>Operational counts, redesigned as live graphs</h1>
           <p className="dashboard-subtitle">
-            {roleId === ROLE_IDS.STATE_ADMIN
-              ? 'Track master-data coverage and move directly into staff approval actions.'
-              : 'Monitor district coverage, portal activity, and key operational areas from one unified control room.'}
+            The dashboard now prioritizes visual reading: large comparative bars, distribution rings,
+            and density charts driven by the live master dashboard counts API.
           </p>
-          {(lastUpdatedText || isRefreshing) && (
-            <div className="dashboard-status">
-              {lastUpdatedText && <span>{lastUpdatedText}</span>}
-              {isRefreshing && <span className="dashboard-status-badge">Refreshing...</span>}
-            </div>
-          )}
+          <div className="dashboard-status">
+            {lastUpdatedText && <span>{lastUpdatedText}</span>}
+            {isRefreshing && <span className="dashboard-status-badge">Refreshing</span>}
+            {loading && counts.length === 0 && <span className="dashboard-status-badge">Loading</span>}
+          </div>
         </div>
 
-        <div className="dashboard-banner-card">
-          <span className="dashboard-banner-label">Portal Focus</span>
-          <strong>{roleId === ROLE_IDS.STATE_ADMIN ? 'Staff approval control room' : 'District administration'}</strong>
-          <p>
-            {roleId === ROLE_IDS.STATE_ADMIN
-              ? 'Use the sidebar to review staff requests and monitor core master-data counts.'
-              : 'Use the sidebar to move between staff approval, CRP operations, and payment review.'}
-          </p>
+        <div className="dashboard-hero-viz">
+          <div className="dashboard-total-label">Total master records</div>
+          <div className="dashboard-total-value">{formatNumber(totalValue)}</div>
+          <svg className="dashboard-sparkline" viewBox="0 0 300 100" preserveAspectRatio="none" aria-hidden="true">
+            <defs>
+              <linearGradient id="dashboardSpark" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#6ec5ff" />
+                <stop offset="50%" stopColor="#ffd166" />
+                <stop offset="100%" stopColor="#ff6b6b" />
+              </linearGradient>
+            </defs>
+            <polyline points={chartPoints} />
+            {visualCounts.map((item, index) => {
+              const x = visualCounts.length === 1 ? 150 : 20 + (260 / (visualCounts.length - 1)) * index;
+              const y = visualCounts.length === 1 ? 24 : 88 - (item.totalCount / maxValue) * 64;
+              return <circle key={item.title} cx={x} cy={y} r="4.5" />;
+            })}
+          </svg>
         </div>
-      </div>
+      </section>
+
       {error && <div className="dashboard-alert">{error}</div>}
-      <div className="stats-grid">
-        {stateAdminCounts.map((item, index) => (
-          <div key={item.title} className={`stat-card${index === 0 ? ' stat-card--primary' : ''}`}>
-            <div className="stat-card__eyebrow">{item.eyebrow}</div>
-            <h3>{item.title}</h3>
-            <span>{loading && counts.length === 0 ? '...' : item.value}</span>
-            <p>{item.description}</p>
-          </div>
-        ))}
-      </div>
-      <div className="dashboard-content-grid">
-        <div className="dashboard-panel dashboard-panel--hero">
-          <div className="panel-head">
-            <h2>Administration Priorities</h2>
-            <p>Recommended first actions for the day based on the current portal structure.</p>
-          </div>
-          <div className="dashboard-priority-list">
-            <div className="dashboard-priority-item">
-              <span className="dashboard-priority-number">01</span>
-              <div>
-                <strong>Review pending staff approvals</strong>
-                <p>Clear onboarding and role access requests before field operations begin.</p>
-              </div>
-            </div>
-            <div className="dashboard-priority-item">
-              <span className="dashboard-priority-number">02</span>
-              <div>
-                <strong>Verify district and block coverage</strong>
-                <p>Check dashboard counts to confirm the master-data hierarchy is loaded correctly.</p>
-              </div>
-            </div>
-            <div className="dashboard-priority-item">
-              <span className="dashboard-priority-number">03</span>
-              <div>
-                <strong>Monitor portal readiness</strong>
-                <p>Use the headline totals to detect missing master data before approving more staff.</p>
-              </div>
-            </div>
-          </div>
-        </div>
 
-        <div className="dashboard-panel">
+      <section className="dashboard-grid">
+        <article className="dashboard-panel dashboard-panel--wide">
           <div className="panel-head">
-            <h2>Master Data Counts</h2>
-            <p>Live totals coming from the dashboard counts endpoint.</p>
+            <div>
+              <span className="panel-eyebrow">Count Comparison</span>
+              <h2>Master data bar graph</h2>
+            </div>
           </div>
-          <div className="district-chip-grid">
-            {stateAdminCounts.map((item) => (
-              <div className="district-chip" key={item.title}>
-                {item.title}: {item.value}
-              </div>
-            ))}
-            {loading && counts.length === 0 && (
-              <div className="dashboard-empty">Loading counts...</div>
-            )}
-            {!loading && counts.length === 0 && (
-              <div className="dashboard-empty">No dashboard counts available.</div>
-            )}
-          </div>
-        </div>
 
-        <div className="dashboard-panel">
+          <div className="bar-chart">
+            {visualCounts.map((item) => {
+              const ratio = (item.totalCount / maxValue) * 100;
+
+              return (
+                <div className="bar-chart-row" key={item.title}>
+                  <div className="bar-chart-meta">
+                    <span className="bar-chart-label">{item.title}</span>
+                    <strong>{formatNumber(item.totalCount)}</strong>
+                  </div>
+                  <div className="bar-chart-track">
+                    <div
+                      className="bar-chart-fill"
+                      style={{
+                        width: `${Math.max(ratio, 6)}%`,
+                        background: `linear-gradient(90deg, ${METRIC_ACCENTS[item.title] ?? '#1f78b4'}, rgba(255,255,255,0.92))`,
+                      }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </article>
+
+        <article className="dashboard-panel">
           <div className="panel-head">
-            <h2>State Admin Access</h2>
-            <p>Modules available for this role in the current portal flow.</p>
-          </div>
-          <div className="dashboard-snapshot-grid">
-            <div className="dashboard-snapshot-card">
-              <strong>Staff</strong>
-              <span>Approval and rejection workflow</span>
-            </div>
-            <div className="dashboard-snapshot-card">
-              <strong>Dashboard</strong>
-              <span>Counts from the master dashboard endpoint</span>
+            <div>
+              <span className="panel-eyebrow">Share View</span>
+              <h2>Distribution rings</h2>
             </div>
           </div>
-        </div>
-      </div>
+
+          <div className="ring-grid">
+            {visualCounts.map((item) => {
+              const share = totalValue > 0 ? (item.totalCount / totalValue) * 100 : 0;
+
+              return (
+                <div className="ring-card" key={item.title}>
+                  <div
+                    className="ring-chart"
+                    style={{
+                      background: `conic-gradient(${METRIC_ACCENTS[item.title] ?? '#1f78b4'} ${share}%, rgba(15, 44, 73, 0.12) ${share}% 100%)`,
+                    }}
+                  >
+                    <div className="ring-chart__inner">
+                      <strong>{share.toFixed(1)}%</strong>
+                    </div>
+                  </div>
+                  <span>{item.title}</span>
+                </div>
+              );
+            })}
+          </div>
+        </article>
+
+        <article className="dashboard-panel">
+          <div className="panel-head">
+            <div>
+              <span className="panel-eyebrow">Density View</span>
+              <h2>Visual intensity map</h2>
+            </div>
+          </div>
+
+          <div className="heat-grid">
+            {visualCounts.map((item) => {
+              const opacity = 0.18 + (item.totalCount / maxValue) * 0.82;
+
+              return (
+                <div
+                  className="heat-card"
+                  key={item.title}
+                  style={{
+                    background: `linear-gradient(145deg, rgba(255,255,255,0.96), color-mix(in srgb, ${METRIC_ACCENTS[item.title] ?? '#1f78b4'} ${Math.round(opacity * 100)}%, white))`,
+                  }}
+                >
+                  <span>{item.title}</span>
+                  <strong>{formatNumber(item.totalCount)}</strong>
+                </div>
+              );
+            })}
+          </div>
+        </article>
+
+        <article className="dashboard-panel dashboard-panel--wide">
+          <div className="panel-head">
+            <div>
+              <span className="panel-eyebrow">Relative Scale</span>
+              <h2>Normalized skyline graph</h2>
+            </div>
+          </div>
+
+          <div className="skyline-chart">
+            {visualCounts.map((item) => {
+              const height = `${Math.max((item.totalCount / maxValue) * 100, 8)}%`;
+
+              return (
+                <div className="skyline-column" key={item.title}>
+                  <div
+                    className="skyline-column__bar"
+                    style={{
+                      height,
+                      background: `linear-gradient(180deg, ${METRIC_ACCENTS[item.title] ?? '#1f78b4'}, rgba(15, 35, 64, 0.92))`,
+                    }}
+                  />
+                  <strong>{formatNumber(item.totalCount)}</strong>
+                  <span>{item.title}</span>
+                </div>
+              );
+            })}
+          </div>
+        </article>
+      </section>
     </div>
   );
 };
