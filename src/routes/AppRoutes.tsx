@@ -14,6 +14,7 @@ import StaffApproval from '../pages/staff/StaffApproval';
 import CRPList from '../pages/crp/CRPList';
 import CRPApproval from '../pages/crp/CRPApproval';
 import CRPTracking from '../pages/crp/CRPTracking';
+import SHGMemberList from '../pages/crp/SHGMemberList';
 // Payment
 import LoanTracking from '../pages/payment/LoanTracking';
 import LoanApproval from '../pages/payment/LoanApproval';
@@ -70,6 +71,10 @@ const AppRoutes: React.FC = () => {
         <Route
           path="/crp/tracking"
           element={<ProtectedRoute allowedRoles={[ROLE_IDS.STATE_ADMIN, ROLE_IDS.DISTRICT_STAFF, ROLE_IDS.BLOCK_STAFF]}><CRPTracking /></ProtectedRoute>}
+        />
+        <Route
+          path="/crp/:crpId/shg-members"
+          element={<ProtectedRoute allowedRoles={[ROLE_IDS.STATE_ADMIN, ROLE_IDS.DISTRICT_STAFF, ROLE_IDS.BLOCK_STAFF]}><SHGMemberList /></ProtectedRoute>}
         />
         {/* Payment */}
         <Route path="/payment/loan-tracking" element={<LoanTracking />} />

@@ -1,6 +1,6 @@
-import api from './api';
 import type { PendingStaffRecord } from '../types/common.types';
 import { getWithFallback } from './requestFallback';
+import api from './api';
 
 type StaffService = {
   getAllUsers: () => Promise<PendingStaffRecord[]>;
@@ -11,12 +11,12 @@ type StaffService = {
   rejectStaff: (staffId: string) => Promise<unknown>;
 };
 
-const ALL_USERS_API_URL = 'https://trlm.pickitover.com/api/api/admin/all-users';
-
 export const staffService: StaffService = {
   getAllUsers: async (): Promise<PendingStaffRecord[]> => {
-    const response = await api.get<PendingStaffRecord[]>(ALL_USERS_API_URL);
-    return response.data;
+    return getWithFallback<PendingStaffRecord[]>([
+      '/admin/all-users',
+      '/admin/staff/all-users',
+    ]);
   },
 
   getPendingStaff: async (): Promise<PendingStaffRecord[]> => {

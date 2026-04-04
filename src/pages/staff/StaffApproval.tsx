@@ -8,6 +8,16 @@ import './StaffApproval.css';
 
 type TabKey = 'pending' | 'approved' | 'rejected';
 
+type StaffApprovalLists = Record<TabKey, PendingStaffRecord[]>;
+
+type StaffApprovalCache = {
+  lists: StaffApprovalLists;
+  cachedAt: number;
+};
+
+const STAFF_APPROVAL_CACHE_KEY = 'trlm_staff_approval_cache_v1';
+const STAFF_APPROVAL_CACHE_TTL_MS = 15 * 60 * 1000;
+
 const TABS: Array<{ key: TabKey; label: string; icon: string }> = [
   { key: 'pending', label: 'Pending', icon: '...' },
   { key: 'approved', label: 'Approved', icon: 'OK' },
@@ -28,15 +38,50 @@ const isStaffApprovalRecord = (staff: PendingStaffRecord): boolean =>
     staff.roleId ?? staff.RoleId ?? staff.role ?? staff.roleName ?? staff.RoleName ?? staff.userRole,
   );
 
+const readApprovalCache = (): StaffApprovalCache | null => {
+  try {
+    const raw = localStorage.getItem(STAFF_APPROVAL_CACHE_KEY);
+    if (!raw) {
+      return null;
+    }
+
+    const parsed = JSON.parse(raw) as StaffApprovalCache;
+    if (Date.now() - parsed.cachedAt > STAFF_APPROVAL_CACHE_TTL_MS) {
+      localStorage.removeItem(STAFF_APPROVAL_CACHE_KEY);
+      return null;
+    }
+
+    return parsed;
+  } catch {
+    localStorage.removeItem(STAFF_APPROVAL_CACHE_KEY);
+    return null;
+  }
+};
+
+const writeApprovalCache = (lists: StaffApprovalLists): void => {
+  try {
+    const payload: StaffApprovalCache = {
+      lists,
+      cachedAt: Date.now(),
+    };
+    localStorage.setItem(STAFF_APPROVAL_CACHE_KEY, JSON.stringify(payload));
+  } catch {
+    // Ignore storage failures and continue with the live response.
+  }
+};
+
 const StaffApproval: React.FC = () => {
   const hasLoadedRef = React.useRef(false);
+  const cached = React.useMemo(() => readApprovalCache(), []);
   const [activeTab, setActiveTab] = React.useState<TabKey>('pending');
-  const [lists, setLists] = React.useState<Record<TabKey, PendingStaffRecord[]>>({
-    pending: [],
-    approved: [],
-    rejected: [],
-  });
-  const [loading, setLoading] = React.useState(true);
+  const [lists, setLists] = React.useState<StaffApprovalLists>(
+    cached?.lists ?? {
+      pending: [],
+      approved: [],
+      rejected: [],
+    },
+  );
+  const [loading, setLoading] = React.useState(!cached);
   const [error, setError] = React.useState('');
   const [approvingId, setApprovingId] = React.useState('');
   const [rejectingId, setRejectingId] = React.useState('');
@@ -73,21 +118,32 @@ const StaffApproval: React.FC = () => {
       return !pendingIds.has(staffId ?? '') && getApprovalBucket(staff) === 'rejected';
     });
 
-    setLists({
+    const nextLists: StaffApprovalLists = {
       pending,
       approved,
       rejected,
-    });
+    };
+
+    setLists(nextLists);
+    writeApprovalCache(nextLists);
 
     const allFailed = [pendingRes, allUsersRes].every((result) => result.status === 'rejected');
     if (allFailed) {
-      setError('Could not load staff data. Please refresh.');
+      setError(
+        cached?.lists
+          ? 'Live staff APIs are unavailable, so cached approval data is being shown.'
+          : 'Could not load staff data. Please refresh.',
+      );
     } else if (pendingRes.status === 'rejected') {
-      setError('Pending staff API returned a server error.');
+      setError(
+        cached?.lists
+          ? 'Pending staff API returned a server error, so cached approval data is being shown.'
+          : 'Pending staff API returned a server error.',
+      );
     }
 
     setLoading(false);
-  }, []);
+  }, [cached?.lists]);
 
   React.useEffect(() => {
     if (hasLoadedRef.current) {
@@ -97,10 +153,14 @@ const StaffApproval: React.FC = () => {
     hasLoadedRef.current = true;
     void loadAll().catch((err) => {
       console.error('[StaffApproval] loadAll failed', err);
-      setError('Failed to load staff data.');
+      setError(
+        cached?.lists
+          ? 'Live staff APIs failed, so cached approval data is being shown.'
+          : 'Failed to load staff data.',
+      );
       setLoading(false);
     });
-  }, [loadAll]);
+  }, [cached?.lists, loadAll]);
 
   const handleApprove = async (staffId: string) => {
     setApprovingId(staffId);

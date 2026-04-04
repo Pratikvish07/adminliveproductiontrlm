@@ -13,7 +13,7 @@ import {
   peekCachedBlocks,
 } from "../../services/masterService";
 import type { SignupBlockOption } from "../../services/masterService";
-import { getUserRoleId, isStaffApprovalRoleId, ROLE_IDS } from "../../utils/roleAccess";
+import { getUserRoleId, ROLE_IDS } from "../../utils/roleAccess";
 import "./Signup.css";
 
 /* ── Types ───────────────────────────────────────────────────── */
@@ -94,20 +94,18 @@ const Signup: React.FC = () => {
   }, [blocks, isBlockStaff, user?.blockId]);
 
   const visibleRoles = React.useMemo(() => {
-    const approvableRoles = roles.filter((role) => isStaffApprovalRoleId(role.roleId));
-
     if (isBlockStaff) {
-      return approvableRoles.filter((role) => String(role.roleId) === ROLE_IDS.BLOCK_STAFF);
+      return roles.filter((role) => String(role.roleId) === ROLE_IDS.BLOCK_STAFF);
     }
 
     if (isDistrictStaff) {
-      return approvableRoles.filter((role) => {
+      return roles.filter((role) => {
         const candidateRoleId = String(role.roleId);
-        return candidateRoleId === ROLE_IDS.BLOCK_STAFF;
+        return candidateRoleId === ROLE_IDS.DISTRICT_STAFF || candidateRoleId === ROLE_IDS.BLOCK_STAFF;
       });
     }
 
-    return approvableRoles;
+    return roles;
   }, [isBlockStaff, isDistrictStaff, roles]);
 
   /* ── Load districts + roles on mount ───────────────────────── */
@@ -174,23 +172,14 @@ const Signup: React.FC = () => {
   ) => {
     setError("");
     const { name, value } = e.target;
-    setFormData((prev) => {
-      if (name === "roleId" && String(value) === ROLE_IDS.DISTRICT_STAFF) {
-        return { ...prev, roleId: value, blockId: "" };
-      }
-
-      return { ...prev, [name]: value };
-    });
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
-
-  const showDistrictField = !isBlockStaff;
 
   /* ── Client-side validation ─────────────────────────────────── */
   const validate = (): string => {
     if (!formData.districtId)          return "Please select a District.";
+    if (!formData.blockId)             return "Please select a Block.";
     if (!formData.roleId)              return "Please select a Role.";
-    if (formData.roleId !== ROLE_IDS.DISTRICT_STAFF && !formData.blockId)
-                                      return "Please select a Block.";
     if (!formData.officialName.trim()) return "Official name is required.";
     if (!isPhone(formData.contactNumber))
                                        return "Enter a valid 10-digit mobile number.";
@@ -222,23 +211,22 @@ const Signup: React.FC = () => {
     const selectedDistrict = visibleDistricts.find(
       (d) => String(d.districtId) === String(formData.districtId)
     );
+    const selectedBlock = visibleBlocks.find(
+      (b) => String(b.blockId) === String(formData.blockId)
+    );
     const selectedRole = visibleRoles.find(
       (r) => String(r.roleId) === String(formData.roleId)
     );
-    const shouldSendNullBlock = String(formData.roleId) === ROLE_IDS.DISTRICT_STAFF;
-    const selectedBlock = shouldSendNullBlock
-      ? null
-      : visibleBlocks.find((b) => String(b.blockId) === String(formData.blockId));
 
-    if (!selectedDistrict || !selectedRole || (!shouldSendNullBlock && !selectedBlock)) {
+    if (!selectedDistrict || !selectedBlock || !selectedRole) {
       setError("Could not resolve selection. Please re-select and try again.");
       return;
     }
 
     /* ── Build payload matching API contract exactly ──────────── */
     const payload = {
-      districtName:        selectedDistrict.districtId.toString(),
-      blockName:           shouldSendNullBlock ? null : selectedBlock!.blockId.toString(),
+      districtName:        selectedDistrict.districtName.trim(),
+      blockName:           selectedBlock.blockName.trim(),
       officialName:        formData.officialName.trim(),
       contactNumber:       formData.contactNumber.trim(),
       officialEmail:       formData.officialEmail.trim().toLowerCase(),
@@ -323,26 +311,25 @@ const Signup: React.FC = () => {
               <div className="signup-section-label">Location &amp; Role</div>
 
               <div className="signup-row">
-                {showDistrictField && (
-                  <div className="signup-field">
-                    <label className="signup-label" htmlFor="districtId">District</label>
-                    <select
-                      id="districtId"
-                      name="districtId"
-                      className="signup-select"
-                      value={formData.districtId}
-                      onChange={handleChange}
-                      disabled={isDistrictStaff}
-                    >
-                      <option value="">{isDistrictStaff ? "Assigned District" : "Select District"}</option>
-                      {visibleDistricts.map((d) => (
-                        <option key={d.districtId} value={d.districtId}>
-                          {d.districtName}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
+                {/* District */}
+                <div className="signup-field">
+                  <label className="signup-label" htmlFor="districtId">District</label>
+                  <select
+                    id="districtId"
+                    name="districtId"
+                    className="signup-select"
+                    value={formData.districtId}
+                    onChange={handleChange}
+                    disabled={isDistrictStaff || isBlockStaff}
+                  >
+                    <option value="">{isDistrictStaff || isBlockStaff ? "Assigned District" : "Select District"}</option>
+                    {visibleDistricts.map((d) => (
+                      <option key={d.districtId} value={d.districtId}>
+                        {d.districtName}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
                 {/* Block */}
                 <div className="signup-field">

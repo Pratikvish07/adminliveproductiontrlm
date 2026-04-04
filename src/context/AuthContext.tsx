@@ -1,7 +1,12 @@
 import React, { createContext, useContext, useState, type ReactNode } from 'react';
 import type { User } from '../types/auth.types';
-
-const AUTH_STORAGE_KEY = 'trlm_auth_user';
+import {
+  AUTH_UNAUTHORIZED_EVENT,
+  clearAuthStorage,
+  getStoredToken,
+  getStoredUser,
+  setStoredUser,
+} from '../utils/authStorage';
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -17,30 +22,31 @@ interface Props {
 }
 
 export const AuthProvider: React.FC<Props> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(() => {
-    try {
-      const rawUser = localStorage.getItem(AUTH_STORAGE_KEY);
-      return rawUser ? JSON.parse(rawUser) as User : null;
-    } catch {
-      localStorage.removeItem(AUTH_STORAGE_KEY);
-      return null;
-    }
-  });
-  const [isAuthenticated, setIsAuthenticated] = useState(() => Boolean(localStorage.getItem('token')));
+  const [user, setUser] = useState<User | null>(() => getStoredUser());
+  const [isAuthenticated, setIsAuthenticated] = useState(() => Boolean(getStoredToken()));
 
   const login = (userData: User) => {
     setUser(userData);
     setIsAuthenticated(true);
-    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(userData));
+    setStoredUser(userData);
   };
 
   const logout = () => {
     setUser(null);
     setIsAuthenticated(false);
-    localStorage.removeItem(AUTH_STORAGE_KEY);
-    localStorage.removeItem('token');
-    localStorage.removeItem('role');
+    clearAuthStorage();
   };
+
+  React.useEffect(() => {
+    const handleUnauthorized = () => {
+      setUser(null);
+      setIsAuthenticated(false);
+      clearAuthStorage();
+    };
+
+    window.addEventListener(AUTH_UNAUTHORIZED_EVENT, handleUnauthorized);
+    return () => window.removeEventListener(AUTH_UNAUTHORIZED_EVENT, handleUnauthorized);
+  }, []);
 
   return (
     <AuthContext.Provider value={{ isAuthenticated, user, login, logout }}>

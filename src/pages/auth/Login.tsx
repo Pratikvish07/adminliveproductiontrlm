@@ -7,6 +7,7 @@ import { useAuth } from '../../context/AuthContext';
 import heroImage from '../../assets/hero.png';
 import { isLikelyScopeId } from '../../utils/helpers';
 import { normalizeRoleId } from '../../utils/roleAccess';
+import { setStoredRole, setStoredToken } from '../../utils/authStorage';
 import './Login.css';
 
 const getFirstValue = (record: Record<string, unknown> | undefined, keys: string[]): string => {
@@ -35,6 +36,17 @@ const resolveUserId = (response: any, livelihoodTrackerId: string): string => {
   }
 
   return livelihoodTrackerId;
+};
+
+const extractAuthToken = (response: any): string => {
+  const token = response?.token
+    ?? response?.accessToken
+    ?? response?.access_token
+    ?? response?.jwt
+    ?? response?.user?.token
+    ?? response?.user?.accessToken;
+
+  return typeof token === 'string' ? token.trim() : '';
 };
 
 /* ── Stats shown on the left panel ── */
@@ -67,6 +79,11 @@ const Login: React.FC = () => {
 
     try {
       const response = await authService.login({ livelihoodTrackerId, password });
+      const authToken = extractAuthToken(response);
+
+      if (!authToken) {
+        throw new Error('Login succeeded, but no access token was returned by the server.');
+      }
 
       const resolvedRole = normalizeRoleId(response.role ?? response.user?.role ?? response.roleId ?? response.user?.roleId);
       const roleId = resolvedRole;
@@ -120,8 +137,10 @@ const Login: React.FC = () => {
             blockName: normalizedBlockName,
           };
 
-      localStorage.setItem('token', response.token);
-      if (roleId) localStorage.setItem('role', roleId);
+      setStoredToken(authToken);
+      if (roleId) {
+        setStoredRole(roleId);
+      }
 
       login(user);
       navigate('/dashboard');
@@ -129,12 +148,14 @@ const Login: React.FC = () => {
       const status = err?.response?.status;
       const detail = err?.response?.data?.detail;
       const message = err?.response?.data?.message;
+      const rawMessage = typeof err?.message === 'string' ? err.message : '';
 
       setError(
+        rawMessage === 'Login succeeded, but no access token was returned by the server.' ? 'Sign in could not be completed because the server did not return a valid session token.' :
         detail === 'Invalid credentials' ? 'Invalid credentials. Please check your User ID and password.' :
         status === 401 ? 'Invalid credentials. Please check your User ID and password.' :
         status >= 500 ? detail || 'Server error during sign in. Please try again in a moment.' :
-        detail || message || 'Invalid credentials. Please check your User ID and password.'
+        detail || message || rawMessage || 'Invalid credentials. Please check your User ID and password.'
       );
     } finally {
       setLoading(false);

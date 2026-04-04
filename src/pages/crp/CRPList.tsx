@@ -1,14 +1,16 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import Loader from '../../components/common/Loader';
 import { useAuth } from '../../context/AuthContext';
 import { crpService } from '../../services/crpService';
+import api from '../../services/api';
 import { getBlocks, getDistricts } from '../../services/masterService';
 import { filterByDistrictAndBlock } from '../../utils/roleAccess';
 import { useResolvedScope } from '../../utils/useResolvedScope';
-import { getCRPid, toCRPRecords, type CRPRecordProcessed } from './crpUtils-clean';
+import { getCRPid, toCRPRecords, type CRPRecordProcessed } from './crpUtils';
 import './CRPList.css';
 
-const CRP_LIST_CACHE_KEY = 'trlm_crp_list_cache_v1';
+const CRP_LIST_CACHE_KEY = 'trlm_crp_list_cache_v2';
 const CRP_LIST_CACHE_TTL_MS = 15 * 60 * 1000;
 
 type CRPListCache = {
@@ -18,23 +20,31 @@ type CRPListCache = {
 
 const STATUS_COLORS: Record<string, string> = {
   Approved: '#1f9d6e',
-  Pending: '#f29f05',
+  Pending:  '#f29f05',
   Rejected: '#d8574b',
+};
+
+/**
+ * API returns approvalStatus as a number:
+ *   1 → Approved, 0 → Pending, 2 → Rejected
+ * Adjust the mapping below if your backend uses different values.
+ */
+const APPROVAL_STATUS_MAP: Record<number, string> = {
+  1: 'Approved',
+  0: 'Pending',
+  2: 'Rejected',
 };
 
 const readCRPCache = (): CRPListCache | null => {
   try {
     const raw = localStorage.getItem(CRP_LIST_CACHE_KEY);
-    if (!raw) {
-      return null;
-    }
+    if (!raw) return null;
 
     const parsed = JSON.parse(raw) as CRPListCache;
     if (Date.now() - parsed.cachedAt > CRP_LIST_CACHE_TTL_MS) {
       localStorage.removeItem(CRP_LIST_CACHE_KEY);
       return null;
     }
-
     return parsed;
   } catch {
     localStorage.removeItem(CRP_LIST_CACHE_KEY);
@@ -43,121 +53,235 @@ const readCRPCache = (): CRPListCache | null => {
 };
 
 const getLastUpdatedText = (cachedAt: number): string => {
-  const diffMs = Date.now() - cachedAt;
-  const diffMinutes = Math.max(0, Math.floor(diffMs / 60000));
+  const diffMinutes = Math.max(0, Math.floor((Date.now() - cachedAt) / 60000));
   return diffMinutes === 0 ? 'Updated just now' : `Updated ${diffMinutes} min ago`;
 };
 
-const formatCount = (value: number): string => new Intl.NumberFormat('en-IN').format(value);
+const formatCount = (value: number): string =>
+  new Intl.NumberFormat('en-IN').format(value);
 
+const clampDegrees = (value: number): number => Math.min(360, Math.max(0, value));
+
+/**
+ * Resolves approvalStatus (number or string) to a human-readable label.
+ */
 const formatStatus = (value: unknown): string => {
-  const normalized = String(value ?? 'Pending').trim();
-  return normalized || 'Pending';
-};
-
-const isUsableLabel = (value: unknown): boolean => {
-  const normalized = String(value ?? '').trim();
-  return normalized !== '' && normalized !== 'N/A' && !/^\d+$/.test(normalized);
-};
-
-const findFirstCandidate = (
-  value: unknown,
-  keys: string[],
-  depth = 0,
-): unknown => {
-  if (depth > 5 || value === null || value === undefined) {
-    return undefined;
+  if (typeof value === 'number') {
+    return APPROVAL_STATUS_MAP[value] ?? 'Pending';
   }
-
-  if (Array.isArray(value)) {
-    for (const item of value) {
-      const nested = findFirstCandidate(item, keys, depth + 1);
-      if (nested !== undefined && nested !== null && nested !== '') {
-        return nested;
-      }
-    }
-    return undefined;
+  const str = String(value ?? '').trim();
+  if (/^\d+$/.test(str)) {
+    return APPROVAL_STATUS_MAP[Number(str)] ?? 'Pending';
   }
-
-  if (typeof value !== 'object') {
-    return undefined;
-  }
-
-  const record = value as Record<string, unknown>;
-  for (const key of keys) {
-    const direct = record[key];
-    if (direct !== undefined && direct !== null && direct !== '') {
-      return direct;
-    }
-  }
-
-  for (const nestedValue of Object.values(record)) {
-    const nested = findFirstCandidate(nestedValue, keys, depth + 1);
-    if (nested !== undefined && nested !== null && nested !== '') {
-      return nested;
-    }
-  }
-
-  return undefined;
+  return str || 'Pending';
 };
 
 const toIdString = (value: unknown): string => {
-  if (value === null || value === undefined || value === '') {
-    return '';
-  }
-
+  if (value === null || value === undefined || value === '') return '';
   return String(value).trim();
 };
 
+const isUsableLabel = (value: unknown): boolean => {
+  const s = String(value ?? '').trim();
+  return s !== '' && s !== 'N/A' && !/^\d+$/.test(s);
+};
+
+const getErrorMessage = (error: unknown): string => {
+  if (typeof error === 'object' && error !== null && 'response' in error) {
+    const response = (error as {
+      response?: {
+        status?: number;
+        data?: unknown;
+      };
+    }).response;
+
+    const message =
+      typeof response?.data === 'object' &&
+      response?.data !== null &&
+      'message' in response.data
+        ? String((response.data as { message?: unknown }).message ?? '')
+        : '';
+
+    return message
+      ? `HTTP ${response?.status ?? 'unknown'}: ${message}`
+      : `HTTP ${response?.status ?? 'unknown'}`;
+  }
+
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return String(error);
+};
+
+// ---------------------------------------------------------------------------
+// Village master fetch
+// ---------------------------------------------------------------------------
+/**
+ * Fetches all villages from the master API and returns villageId → villageName map.
+ * Tries common field name variants to handle API shape differences.
+ */
+const fetchVillageMap = async (): Promise<Map<string, string>> => {
+  try {
+    const response = await api.get<unknown>('/master/village');
+    const payload = response.data;
+
+    if (!Array.isArray(payload)) {
+      throw new Error('Village API did not return an array payload');
+    }
+
+    const map = new Map<string, string>();
+
+    for (const item of payload) {
+      if (typeof item !== 'object' || item === null) continue;
+      const row = item as Record<string, unknown>;
+
+      const id =
+        row['villageId']   ??
+        row['VillageId']   ??
+        row['village_id']  ??
+        row['id']          ?? '';
+
+      const name =
+        row['villageName']  ??
+        row['VillageName']  ??
+        row['village_name'] ??
+        row['name']         ?? '';
+
+      const idStr   = String(id).trim();
+      const nameStr = String(name).trim();
+
+      if (idStr && nameStr) {
+        map.set(idStr, nameStr);
+      }
+    }
+
+    console.log('[fetchVillageMap] loaded', map.size, 'villages — sample:', [...map.entries()][0]);
+    return map;
+  } catch (err) {
+    console.warn(
+      '[fetchVillageMap] failed — village names will fall back to IDs:',
+      getErrorMessage(err),
+      err,
+    );
+    return new Map();
+  }
+};
+
+// ---------------------------------------------------------------------------
+// enrichCRPRecords
+// ---------------------------------------------------------------------------
+/**
+ * Actual API record shape (confirmed from console log):
+ * {
+ *   aadhaarNo, approvalStatus (number), blockId (number),
+ *   contactNo, createdDate, crpId, crpRegistrationId,
+ *   fullName, villageId (number)
+ * }
+ *
+ * Key findings:
+ *  - NO districtId in record → district is derived via blockId lookup
+ *  - approvalStatus is numeric (1=Approved, 0=Pending, 2=Rejected)
+ *  - name field is fullName
+ *  - villageId resolved to villageName via /master/village
+ */
 const enrichCRPRecords = async (
   rawRecords: Record<string, unknown>[],
   processedRecords: CRPRecordProcessed[],
 ): Promise<CRPRecordProcessed[]> => {
-  const districts = await getDistricts().catch(() => []);
-  const districtMap = new Map(districts.map((district) => [String(district.districtId), district.districtName]));
 
-  const neededDistrictIds = new Set<string>();
+  // ------------------------------------------------------------------
+  // 1. Fetch districts + villages in parallel
+  // ------------------------------------------------------------------
+  const [districts, villageMap] = await Promise.all([
+    getDistricts().catch(() => []),
+    fetchVillageMap(),
+  ]);
+  console.log('[enrichCRPRecords] districts sample:', districts[0]);
 
-  processedRecords.forEach((record, index) => {
-    if (!isUsableLabel(record.district)) {
-      const districtId = toIdString(findFirstCandidate(rawRecords[index], ['districtId', 'DistrictId', 'district']));
-      if (districtId) {
-        neededDistrictIds.add(districtId);
-      }
-    }
-  });
+  // districtId → districtName
+  const districtNameMap = new Map<string, string>(
+    districts.map((d) => [
+      String(d.districtId ?? ''),
+      String(d.districtName ?? ''),
+    ]),
+  );
 
-  const blockMap = new Map<string, string>();
+  // ------------------------------------------------------------------
+  // 2. Fetch blocks for EVERY district → build blockId → { blockName, districtId }
+  //    This is necessary because raw records have blockId but NO districtId.
+  // ------------------------------------------------------------------
+  const blockDetailMap = new Map<string, { blockName: string; districtId: string }>();
+
   await Promise.all(
-    Array.from(neededDistrictIds).map(async (districtId) => {
+    districts.map(async (d) => {
+      const districtId = String(d.districtId ?? '');
+      if (!districtId) return;
+
       const blocks = await getBlocks(districtId).catch(() => []);
+      if (blocks.length > 0) {
+        console.log('[enrichCRPRecords] blocks sample for district', districtId, ':', blocks[0]);
+      }
+
       blocks.forEach((block) => {
-        blockMap.set(String(block.blockId), block.blockName);
+        const blockId = String(block.blockId ?? '');
+        if (blockId) {
+          blockDetailMap.set(blockId, {
+            blockName:  String(block.blockName ?? ''),
+            districtId,
+          });
+        }
       });
     }),
   );
 
+  // ------------------------------------------------------------------
+  // 3. Map every record using the resolved lookups
+  // ------------------------------------------------------------------
   return processedRecords.map((record, index) => {
-    const rawRecord = rawRecords[index];
-    const districtId = toIdString(findFirstCandidate(rawRecord, ['districtId', 'DistrictId', 'district']));
-    const blockId = toIdString(findFirstCandidate(rawRecord, ['blockId', 'BlockId', 'block']));
+    const raw = rawRecords[index];
 
-    const districtName = isUsableLabel(record.district)
-      ? String(record.district)
-      : districtMap.get(districtId) ?? 'N/A';
-    const blockName = isUsableLabel(record.block)
-      ? String(record.block)
-      : blockMap.get(blockId) ?? 'N/A';
+    // blockId is confirmed present in raw record as a number
+    const blockId     = toIdString(raw['blockId'] ?? raw['BlockId'] ?? raw['block_id'] ?? '');
+    const blockDetail = blockDetailMap.get(blockId);
+
+    const blockName = blockDetail?.blockName
+      ?? (isUsableLabel(record.block) ? String(record.block) : 'N/A');
+
+    const districtId   = blockDetail?.districtId ?? '';
+    const districtName = (districtId ? districtNameMap.get(districtId) : undefined)
+      ?? (isUsableLabel(record.district) ? String(record.district) : 'N/A');
+
+    // Village: resolve villageId → villageName via master API map
+    const villageId   = toIdString(raw['villageId'] ?? raw['VillageId'] ?? raw['village_id'] ?? '');
+    const villageName = isUsableLabel(record.village)
+      ? String(record.village)
+      : villageMap.get(villageId) ?? (villageId || 'N/A');
+
+    // Name: API returns fullName, not name
+    const name = toIdString(raw['fullName'] ?? raw['name'] ?? '') || String(record.name ?? 'N/A');
+
+    // Status: API returns numeric approvalStatus
+    const rawStatus = raw['approvalStatus'] ?? raw['status'] ?? record.status;
+    const status    = formatStatus(rawStatus);
 
     return {
       ...record,
+      name,
       district: districtName,
-      block: blockName,
+      block:    blockName,
+      village:  villageName,
+      status,
     };
   });
 };
 
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
+
 const CRPList: React.FC = () => {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { scopedUser } = useResolvedScope(user);
   const hasLoadedRef = React.useRef(false);
@@ -166,7 +290,9 @@ const CRPList: React.FC = () => {
   const [loading, setLoading] = React.useState(!cached);
   const [isRefreshing, setIsRefreshing] = React.useState(false);
   const [error, setError] = React.useState('');
-  const [lastUpdatedText, setLastUpdatedText] = React.useState(cached ? getLastUpdatedText(cached.cachedAt) : '');
+  const [lastUpdatedText, setLastUpdatedText] = React.useState(
+    cached ? getLastUpdatedText(cached.cachedAt) : '',
+  );
 
   const loadCRPList = React.useCallback(async (refreshOnly: boolean) => {
     try {
@@ -182,13 +308,11 @@ const CRPList: React.FC = () => {
         ['blockId', 'block', 'blockName', 'BlockId', 'Block', 'BlockName'],
       );
       const processed = toCRPRecords(scopedRecords);
-      const enriched = await enrichCRPRecords(scopedRecords, processed);
+      const enriched  = await enrichCRPRecords(scopedRecords, processed);
 
       setRecords(enriched);
-      const nextCache: CRPListCache = {
-        records: enriched,
-        cachedAt: Date.now(),
-      };
+
+      const nextCache: CRPListCache = { records: enriched, cachedAt: Date.now() };
       localStorage.setItem(CRP_LIST_CACHE_KEY, JSON.stringify(nextCache));
       setLastUpdatedText(getLastUpdatedText(nextCache.cachedAt));
     } catch (err) {
@@ -201,31 +325,30 @@ const CRPList: React.FC = () => {
   }, [records.length, scopedUser]);
 
   React.useEffect(() => {
-    if (hasLoadedRef.current) {
-      return;
-    }
-
+    if (hasLoadedRef.current) return;
     hasLoadedRef.current = true;
     void loadCRPList(Boolean(cached?.records.length));
   }, [cached?.records.length, loadCRPList]);
 
+  // ------------------------------------------------------------------
+  // Derived state
+  // ------------------------------------------------------------------
+
   const totalRecords = records.length;
 
   const statusBreakdown = React.useMemo(() => {
-    const statuses = ['Approved', 'Pending', 'Rejected'];
-    return statuses.map((status) => ({
+    return ['Approved', 'Pending', 'Rejected'].map((status) => ({
       label: status,
-      count: records.filter((record) => formatStatus(record.status) === status).length,
+      count: records.filter((r) => formatStatus(r.status) === status).length,
     }));
   }, [records]);
 
   const districtBreakdown = React.useMemo(() => {
     const map = new Map<string, number>();
-    for (const record of records) {
-      const district = String(record.district ?? 'Unknown');
-      map.set(district, (map.get(district) ?? 0) + 1);
+    for (const r of records) {
+      const key = String(r.district ?? 'Unknown');
+      map.set(key, (map.get(key) ?? 0) + 1);
     }
-
     return Array.from(map.entries())
       .map(([label, count]) => ({ label, count }))
       .sort((a, b) => b.count - a.count)
@@ -234,11 +357,10 @@ const CRPList: React.FC = () => {
 
   const blockBreakdown = React.useMemo(() => {
     const map = new Map<string, number>();
-    for (const record of records) {
-      const key = `${record.district ?? 'Unknown'} / ${record.block ?? 'Unknown'}`;
+    for (const r of records) {
+      const key = `${r.district ?? 'Unknown'} / ${r.block ?? 'Unknown'}`;
       map.set(key, (map.get(key) ?? 0) + 1);
     }
-
     return Array.from(map.entries())
       .map(([label, count]) => ({ label, count }))
       .sort((a, b) => b.count - a.count)
@@ -247,15 +369,72 @@ const CRPList: React.FC = () => {
 
   const maxChartValue = React.useMemo(() => {
     const values = [
-      ...statusBreakdown.map((item) => item.count),
-      ...districtBreakdown.map((item) => item.count),
-      ...blockBreakdown.map((item) => item.count),
+      ...statusBreakdown.map((i) => i.count),
+      ...districtBreakdown.map((i) => i.count),
+      ...blockBreakdown.map((i) => i.count),
     ];
-
     return Math.max(...values, 1);
   }, [blockBreakdown, districtBreakdown, statusBreakdown]);
 
   const recentRecords = React.useMemo(() => records.slice(0, 8), [records]);
+  const approvedCount = statusBreakdown.find((item) => item.label === 'Approved')?.count ?? 0;
+  const pendingCount = statusBreakdown.find((item) => item.label === 'Pending')?.count ?? 0;
+  const approvalRate = totalRecords === 0 ? 0 : Math.round((approvedCount / totalRecords) * 100);
+  const villagesCovered = React.useMemo(() => {
+    const villageSet = new Set(
+      records.map((record) => String(record.village ?? record.villageId ?? '').trim()).filter(Boolean),
+    );
+    return villageSet.size;
+  }, [records]);
+  const topDistrictLabel = districtBreakdown[0]?.label ?? 'No district yet';
+  const topDistrictCount = districtBreakdown[0]?.count ?? 0;
+  const topBlockLabel = blockBreakdown[0]?.label ?? 'No block yet';
+  const topBlockCount = blockBreakdown[0]?.count ?? 0;
+  const statusChartStyle = {
+    background: `conic-gradient(
+      #1f9d6e 0deg ${clampDegrees(totalRecords === 0 ? 0 : (approvedCount / totalRecords) * 360)}deg,
+      #f29f05 ${clampDegrees(totalRecords === 0 ? 0 : (approvedCount / totalRecords) * 360)}deg ${clampDegrees(totalRecords === 0 ? 0 : ((approvedCount + pendingCount) / totalRecords) * 360)}deg,
+      #d8574b ${clampDegrees(totalRecords === 0 ? 0 : ((approvedCount + pendingCount) / totalRecords) * 360)}deg 360deg
+    )`,
+  };
+  const summaryCards = [
+    {
+      label: 'Approval rate',
+      value: `${approvalRate}%`,
+      note: `${formatCount(approvedCount)} approved out of ${formatCount(totalRecords)}`,
+      tone: 'approved',
+    },
+    {
+      label: 'Villages covered',
+      value: formatCount(villagesCovered),
+      note: 'Unique villages across the current CRP dataset',
+      tone: 'info',
+    },
+    {
+      label: 'Top district',
+      value: topDistrictLabel,
+      note: `${formatCount(topDistrictCount)} CRP records concentrated here`,
+      tone: 'accent',
+    },
+    {
+      label: 'Pending review',
+      value: formatCount(pendingCount),
+      note: 'Records still waiting for action',
+      tone: 'pending',
+    },
+  ];
+  const coveragePulse = [
+    ...districtBreakdown.slice(0, 3).map((item) => ({
+      label: item.label,
+      count: item.count,
+      caption: 'District load',
+    })),
+    ...blockBreakdown.slice(0, 3).map((item) => ({
+      label: item.label,
+      count: item.count,
+      caption: 'District / Block pair',
+    })),
+  ].slice(0, 6);
 
   if (loading && records.length === 0) {
     return <Loader />;
@@ -282,16 +461,88 @@ const CRPList: React.FC = () => {
           <span>Total CRP records</span>
           <strong>{formatCount(totalRecords)}</strong>
           <p>
-            Approved {formatCount(statusBreakdown.find((item) => item.label === 'Approved')?.count ?? 0)} ·
-            Pending {formatCount(statusBreakdown.find((item) => item.label === 'Pending')?.count ?? 0)} ·
-            Rejected {formatCount(statusBreakdown.find((item) => item.label === 'Rejected')?.count ?? 0)}
+            Approved {formatCount(statusBreakdown.find((i) => i.label === 'Approved')?.count ?? 0)} ·
+            Pending {formatCount(statusBreakdown.find((i) => i.label === 'Pending')?.count ?? 0)} ·
+            Rejected {formatCount(statusBreakdown.find((i) => i.label === 'Rejected')?.count ?? 0)}
           </p>
         </div>
       </section>
 
       {error && <div className="crp-alert">{error}</div>}
 
+      <section className="crp-summary-strip">
+        {summaryCards.map((card) => (
+          <article className={`crp-summary-card crp-summary-card--${card.tone}`} key={card.label}>
+            <span>{card.label}</span>
+            <strong>{card.value}</strong>
+            <p>{card.note}</p>
+          </article>
+        ))}
+      </section>
+
       <section className="crp-grid">
+        <article className="crp-panel">
+          <div className="crp-panel__head">
+            <div>
+              <span className="crp-panel__eyebrow">Status Signal</span>
+              <h2>Live approval mix</h2>
+              <p>A quick visual split of approved, pending, and rejected CRP records.</p>
+            </div>
+          </div>
+
+          <div className="crp-status-wheel">
+            <div className="crp-status-wheel__chart" style={statusChartStyle}>
+              <div className="crp-status-wheel__center">
+                <strong>{formatCount(totalRecords)}</strong>
+                <span>Total records</span>
+              </div>
+            </div>
+
+            <div className="crp-status-wheel__legend">
+              {statusBreakdown.map((item) => (
+                <div className="crp-status-wheel__legend-item" key={item.label}>
+                  <span
+                    className="crp-status-wheel__dot"
+                    style={{ backgroundColor: STATUS_COLORS[item.label] ?? '#1f78b4' }}
+                  />
+                  <div>
+                    <strong>{item.label}</strong>
+                    <span>{formatCount(item.count)} records</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </article>
+
+        <article className="crp-panel">
+          <div className="crp-panel__head">
+            <div>
+              <span className="crp-panel__eyebrow">Field Pulse</span>
+              <h2>Coverage momentum</h2>
+              <p>Quick intensity bars showing where most CRP activity is clustered right now.</p>
+            </div>
+          </div>
+
+          <div className="crp-pulse-list">
+            {coveragePulse.map((item) => (
+              <div className="crp-pulse-list__item" key={`${item.caption}-${item.label}`}>
+                <div className="crp-pulse-list__meta">
+                  <span>{item.caption}</span>
+                  <strong>{item.label}</strong>
+                </div>
+                <div className="crp-pulse-list__bar">
+                  <div
+                    className="crp-pulse-list__fill"
+                    style={{ width: `${Math.max((item.count / maxChartValue) * 100, 10)}%` }}
+                  />
+                </div>
+                <em>{formatCount(item.count)}</em>
+              </div>
+            ))}
+          </div>
+        </article>
+
         <article className="crp-panel crp-panel--wide">
           <div className="crp-panel__head">
             <div>
@@ -299,12 +550,10 @@ const CRPList: React.FC = () => {
               <h2>Status distribution</h2>
             </div>
           </div>
-
           <div className="crp-status-bars">
             {statusBreakdown.map((item) => {
               const width = (item.count / maxChartValue) * 100;
               const color = STATUS_COLORS[item.label] ?? '#1f78b4';
-
               return (
                 <div className="crp-status-bars__row" key={item.label}>
                   <div className="crp-status-bars__meta">
@@ -333,7 +582,6 @@ const CRPList: React.FC = () => {
               <h2>District concentration</h2>
             </div>
           </div>
-
           <div className="crp-district-grid">
             {districtBreakdown.map((item) => {
               const intensity = Math.round((item.count / maxChartValue) * 100);
@@ -358,9 +606,9 @@ const CRPList: React.FC = () => {
             <div>
               <span className="crp-panel__eyebrow">Coverage View</span>
               <h2>Top district-block pairs</h2>
+              <p>{topBlockLabel} currently leads with {formatCount(topBlockCount)} records.</p>
             </div>
           </div>
-
           <div className="crp-pair-list">
             {blockBreakdown.map((item) => (
               <div className="crp-pair-list__item" key={item.label}>
@@ -386,14 +634,27 @@ const CRPList: React.FC = () => {
             <div className="crp-list">
               {recentRecords.map((record, index) => {
                 const status = formatStatus(record.status);
+                const crpId = getCRPid(record);
+                const villageId = String(record.villageId ?? '').trim();
+                const canOpenMembers = Boolean(crpId && villageId);
                 return (
-                  <article className="crp-list__card" key={getCRPid(record) || index}>
+                  <article className="crp-list__card" key={crpId || index}>
                     <div className="crp-list__identity">
                       <div className="crp-list__avatar">
                         {String(record.name ?? 'C').charAt(0).toUpperCase()}
                       </div>
                       <div className="crp-list__copy">
-                        <strong>{String(record.name ?? 'N/A')}</strong>
+                        {canOpenMembers ? (
+                          <button
+                            type="button"
+                            className="crp-link-button"
+                            onClick={() => navigate(`/crp/${crpId}/shg-members?villageId=${encodeURIComponent(villageId)}`)}
+                          >
+                            {String(record.name ?? 'N/A')}
+                          </button>
+                        ) : (
+                          <strong>{String(record.name ?? 'N/A')}</strong>
+                        )}
                         <span>{String(record.crpId ?? record.crpRegistrationId ?? '-')}</span>
                       </div>
                     </div>
@@ -416,8 +677,8 @@ const CRPList: React.FC = () => {
                         <span>{String(record.contactNo ?? '-')}</span>
                       </div>
                       <div>
-                        <label>Village ID</label>
-                        <span>{String(record.villageId ?? '-')}</span>
+                        <label>Village</label>
+                        <span>{String(record.village ?? record.villageId ?? '-')}</span>
                       </div>
                       <div>
                         <label>Created</label>

@@ -2,7 +2,7 @@ import React from 'react';
 import Loader from '../../components/common/Loader';
 import { crpService } from '../../services/crpService';
 import { useAuth } from '../../context/AuthContext';
-import { toCRPRecords } from './crpUtils-clean';
+import { toCRPRecords } from './crpUtils';
 import CRPTable from './CRPTable';
 import { isLikelyScopeId } from '../../utils/helpers';
 import { filterByDistrictAndBlock, getUserRoleId, ROLE_IDS } from '../../utils/roleAccess';

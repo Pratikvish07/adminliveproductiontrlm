@@ -1,7 +1,7 @@
 import type { CRPRecord } from '../../services/crpService';
 import type { PendingCRPRecord } from '../../services/crpService';
 
-export type CRPRecordProcessed = Record<string, string | number>;
+export type CRPRecordProcessed = Record<string, string | number | undefined>;
 
 const getNestedValue = (value: unknown): unknown => {
   if (!value || typeof value !== 'object') {
@@ -45,12 +45,145 @@ const getFirstValue = (record: Record<string, unknown>, keys: string[]): unknown
   return undefined;
 };
 
+const findNestedValueByKeys = (
+  value: unknown,
+  keys: string[],
+  depth = 0,
+): unknown => {
+  if (depth > 5 || value === null || value === undefined) {
+    return undefined;
+  }
+
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const nested = findNestedValueByKeys(item, keys, depth + 1);
+      if (nested !== undefined && nested !== null && nested !== '') {
+        return nested;
+      }
+    }
+    return undefined;
+  }
+
+  if (typeof value !== 'object') {
+    return undefined;
+  }
+
+  const record = value as Record<string, unknown>;
+
+  for (const key of keys) {
+    const directValue = record[key];
+    if (directValue !== undefined && directValue !== null && directValue !== '') {
+      return getNestedValue(directValue);
+    }
+  }
+
+  for (const nestedValue of Object.values(record)) {
+    const nested = findNestedValueByKeys(nestedValue, keys, depth + 1);
+    if (nested !== undefined && nested !== null && nested !== '') {
+      return nested;
+    }
+  }
+
+  return undefined;
+};
+
 const normalizeText = (value: unknown, fallback = 'N/A'): string => {
   if (value === null || value === undefined || value === '') {
     return fallback;
   }
 
   return String(value);
+};
+
+const resolveDistrictValue = (record: Record<string, unknown>): string => {
+  const directValue = getFirstValue(record, [
+    'districtName',
+    'DistrictName',
+    'district',
+    'District',
+    'districtMaster',
+    'DistrictMaster',
+    'districtData',
+    'DistrictData',
+  ]);
+
+  if (directValue !== undefined && directValue !== null && directValue !== '') {
+    return normalizeText(directValue);
+  }
+
+  return normalizeText(
+    findNestedValueByKeys(record, [
+      'districtName',
+      'DistrictName',
+      'name',
+      'Name',
+      'label',
+      'Label',
+      'title',
+      'Title',
+    ]),
+  );
+};
+
+const resolveBlockValue = (record: Record<string, unknown>): string => {
+  const directValue = getFirstValue(record, [
+    'blockName',
+    'BlockName',
+    'block',
+    'Block',
+    'blockMaster',
+    'BlockMaster',
+    'blockData',
+    'BlockData',
+  ]);
+
+  if (directValue !== undefined && directValue !== null && directValue !== '') {
+    return normalizeText(directValue);
+  }
+
+  return normalizeText(
+    findNestedValueByKeys(record, [
+      'blockName',
+      'BlockName',
+      'name',
+      'Name',
+      'label',
+      'Label',
+      'title',
+      'Title',
+    ]),
+  );
+};
+
+const resolveVillageValue = (record: Record<string, unknown>): string => {
+  const directValue = getFirstValue(record, [
+    'villageName',
+    'VillageName',
+    'village',
+    'Village',
+    'villageMaster',
+    'VillageMaster',
+    'villageData',
+    'VillageData',
+  ]);
+
+  if (directValue !== undefined && directValue !== null && directValue !== '') {
+    return normalizeText(directValue);
+  }
+
+  return normalizeText(
+    findNestedValueByKeys(record, [
+      'villageName',
+      'VillageName',
+      'name',
+      'Name',
+      'label',
+      'Label',
+      'title',
+      'Title',
+    ]),
+    '',
+  );
 };
 
 const normalizeStatus = (record: Record<string, unknown>): string => {
@@ -102,46 +235,17 @@ const normalizeStatus = (record: Record<string, unknown>): string => {
 
 export function toCRPRecords(records: CRPRecord[] | PendingCRPRecord[]): CRPRecordProcessed[] {
   return records.map((record) => ({
-    id: normalizeText(getFirstValue(record, ['id', 'Id', 'crpRegistrationId', 'CrpRegistrationId']), '-'),
+    ...record as any,
     name: normalizeText(getFirstValue(record, ['name', 'Name', 'officialName', 'OfficialName', 'fullName', 'FullName'])),
-    district: normalizeText(
-      getFirstValue(record, [
-        'district',
-        'District',
-        'districtName',
-        'DistrictName',
-        'districtMaster',
-        'DistrictMaster',
-        'districtData',
-        'DistrictData',
-        'districtId',
-        'DistrictId',
-      ]),
-    ),
-    block: normalizeText(
-      getFirstValue(record, [
-        'block',
-        'Block',
-        'blockName',
-        'BlockName',
-        'blockMaster',
-        'BlockMaster',
-        'blockData',
-        'BlockData',
-        'blockId',
-        'BlockId',
-      ]),
-    ),
+    district: resolveDistrictValue(record),
+    block: resolveBlockValue(record),
+    village: resolveVillageValue(record),
     status: normalizeStatus(record),
-    crpRegistrationId: normalizeText(getFirstValue(record, ['crpRegistrationId', 'CrpRegistrationId', 'id', 'Id']), '-'),
-    crpId: normalizeText(getFirstValue(record, ['crpId', 'CrpId', 'lokOSId', 'LokOSId']), '-'),
-    fullName: normalizeText(getFirstValue(record, ['fullName', 'FullName', 'name', 'Name', 'officialName', 'OfficialName'])),
-    aadhaarNo: normalizeText(getFirstValue(record, ['aadhaarNo', 'AadhaarNo']), '-'),
   }));
 }
 
 export function getCRPid(record: CRPRecordProcessed): string {
-  return String(record.crpRegistrationId || record.id || '');
+  return String((record as any).crpRegistrationId || (record as any).id || '');
 }
 
 export function formatCRPValue(value: any): string {
@@ -150,3 +254,4 @@ export function formatCRPValue(value: any): string {
   if (typeof value === 'boolean') return value ? 'Yes' : 'No';
   return String(value);
 }
+
