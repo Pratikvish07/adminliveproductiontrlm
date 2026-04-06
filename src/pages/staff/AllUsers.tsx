@@ -7,15 +7,7 @@ import { filterByDistrictAndBlock } from '../../utils/roleAccess';
 import { useResolvedScope } from '../../utils/useResolvedScope';
 import './Staff.css';
 
-const ALL_USERS_CACHE_KEY = 'trlm_all_users_cache_v1';
-const ALL_USERS_CACHE_TTL_MS = 15 * 60 * 1000;
-
 type StaffAnalyticsRecord = ReturnType<typeof toStaffRecords>[number];
-
-type AllUsersCache = {
-  records: StaffAnalyticsRecord[];
-  cachedAt: number;
-};
 
 const ROLE_COLORS: Record<string, string> = {
   STATE_ADMIN: '#0f4c81',
@@ -31,33 +23,13 @@ const APPROVAL_COLORS: Record<string, string> = {
   unknown: '#6c7f92',
 };
 
-const readUsersCache = (): AllUsersCache | null => {
-  try {
-    const raw = localStorage.getItem(ALL_USERS_CACHE_KEY);
-    if (!raw) {
-      return null;
-    }
-
-    const cache = JSON.parse(raw) as AllUsersCache;
-    if (Date.now() - cache.cachedAt > ALL_USERS_CACHE_TTL_MS) {
-      localStorage.removeItem(ALL_USERS_CACHE_KEY);
-      return null;
-    }
-
-    return cache;
-  } catch {
-    localStorage.removeItem(ALL_USERS_CACHE_KEY);
-    return null;
-  }
-};
-
 const getLoadUsersErrorMessage = (err: any): string => {
   if (err?.code === 'ECONNABORTED' || String(err?.message ?? '').toLowerCase().includes('timeout')) {
-    return 'The all users API is taking too long to respond. Cached analytics are being shown.';
+    return 'The all users API is taking too long to respond.';
   }
 
   if (!err?.response) {
-    return 'The all users API could not be reached. Cached analytics are being shown.';
+    return 'The all users API could not be reached.';
   }
 
   if (err.response.status === 401) {
@@ -72,12 +44,6 @@ const getLoadUsersErrorMessage = (err: any): string => {
 };
 
 const formatCount = (value: number): string => new Intl.NumberFormat('en-IN').format(value);
-
-const getLastUpdatedText = (cachedAt: number): string => {
-  const diffMs = Date.now() - cachedAt;
-  const diffMinutes = Math.max(0, Math.floor(diffMs / 60000));
-  return diffMinutes === 0 ? 'Updated just now' : `Updated ${diffMinutes} min ago`;
-};
 
 const getDistrictName = (record: StaffAnalyticsRecord): string =>
   String(record.districtName ?? record.district ?? record.DistrictName ?? '-');
@@ -130,20 +96,14 @@ const AllUsers: React.FC = () => {
   const { user } = useAuth();
   const { scopedUser } = useResolvedScope(user);
   const hasLoadedRef = React.useRef(false);
-  const cachedUsers = React.useMemo(() => readUsersCache(), []);
-  const [records, setRecords] = React.useState<StaffAnalyticsRecord[]>(cachedUsers?.records ?? []);
-  const [loading, setLoading] = React.useState(!cachedUsers);
+  const [records, setRecords] = React.useState<StaffAnalyticsRecord[]>([]);
+  const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState('');
-  const [isRefreshing, setIsRefreshing] = React.useState(false);
-  const [lastUpdatedText, setLastUpdatedText] = React.useState(
-    cachedUsers ? getLastUpdatedText(cachedUsers.cachedAt) : '',
-  );
 
-  const loadUsers = React.useCallback(async (preferRefreshState: boolean) => {
+  const loadUsers = React.useCallback(async () => {
     try {
       setError('');
-      setIsRefreshing(preferRefreshState);
-      setLoading(!preferRefreshState && records.length === 0);
+      setLoading(true);
 
       const response = await staffService.getAllUsers();
       const filteredRecords = filterByDistrictAndBlock(
@@ -154,27 +114,12 @@ const AllUsers: React.FC = () => {
       );
 
       setRecords(filteredRecords);
-
-      const cache: AllUsersCache = {
-        records: filteredRecords,
-        cachedAt: Date.now(),
-      };
-      localStorage.setItem(ALL_USERS_CACHE_KEY, JSON.stringify(cache));
-      setLastUpdatedText(getLastUpdatedText(cache.cachedAt));
     } catch (err: any) {
-      console.error('Failed to load all users', {
-        code: err?.code,
-        message: err?.message,
-        status: err?.response?.status,
-        data: err?.response?.data,
-        url: err?.config?.url,
-      });
       setError(getLoadUsersErrorMessage(err));
     } finally {
       setLoading(false);
-      setIsRefreshing(false);
     }
-  }, [records.length, scopedUser]);
+  }, [scopedUser]);
 
   React.useEffect(() => {
     if (hasLoadedRef.current) {
@@ -182,8 +127,8 @@ const AllUsers: React.FC = () => {
     }
 
     hasLoadedRef.current = true;
-    void loadUsers(Boolean(cachedUsers?.records.length));
-  }, [cachedUsers?.records.length, loadUsers]);
+    void loadUsers();
+  }, [loadUsers]);
 
   const roleBreakdown = React.useMemo(() => {
     const map = new Map<string, number>();
@@ -246,13 +191,11 @@ const AllUsers: React.FC = () => {
           <p className="staff-kicker">User Analytics</p>
           <h1>All users, visualized for faster review</h1>
           <p className="staff-subtitle">
-            This page now loads from the live all-users API with cache-first rendering, then turns the user base
-            into role, approval, and district graphs so you can scan the system quickly.
+            This page loads directly from the live all-users API and turns the user base into role, approval,
+            and district graphs so you can scan the system quickly.
           </p>
           <div className="staff-hero__status">
-            {lastUpdatedText && <span>{lastUpdatedText}</span>}
-            {isRefreshing && <span className="staff-status-badge">Refreshing</span>}
-            {error && <span className="staff-status-badge staff-status-badge--warn">Cached</span>}
+            {error && <span className="staff-status-badge staff-status-badge--warn">Live API error</span>}
           </div>
         </div>
 

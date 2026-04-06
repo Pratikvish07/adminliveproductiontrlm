@@ -12,52 +12,9 @@ export type DashboardCount = {
   TotalCount: number;
 };
 
-const MASTER_CACHE_TTL_MS = 30 * 60 * 1000;
-const DISTRICTS_CACHE_KEY = 'trlm_master_districts_v1';
-const ROLES_CACHE_KEY = 'trlm_master_roles_v1';
-const BLOCKS_CACHE_PREFIX = 'trlm_master_blocks_v1';
-const DASHBOARD_COUNTS_API_URL = 'https://trlm.pickitover.com/api/api/master/dashboard-counts';
-
-type CachedValue<T> = {
-  data: T;
-  cachedAt: number;
-};
-
 let districtsPromise: Promise<District[]> | null = null;
 let rolesPromise: Promise<Role[]> | null = null;
 const blockPromises = new Map<string, Promise<SignupBlockOption[]>>();
-
-const readCache = <T,>(key: string): T | null => {
-  try {
-    const raw = localStorage.getItem(key);
-    if (!raw) {
-      return null;
-    }
-
-    const parsed = JSON.parse(raw) as CachedValue<T>;
-    if (Date.now() - parsed.cachedAt > MASTER_CACHE_TTL_MS) {
-      localStorage.removeItem(key);
-      return null;
-    }
-
-    return parsed.data;
-  } catch {
-    localStorage.removeItem(key);
-    return null;
-  }
-};
-
-const writeCache = <T,>(key: string, data: T) => {
-  try {
-    const value: CachedValue<T> = {
-      data,
-      cachedAt: Date.now(),
-    };
-    localStorage.setItem(key, JSON.stringify(value));
-  } catch {
-    // Ignore storage failures and continue with live data.
-  }
-};
 
 const toDistrictOptions = (payload: unknown): District[] => {
   if (!Array.isArray(payload)) {
@@ -112,19 +69,7 @@ const toRoleOptions = (payload: unknown): Role[] => {
     .filter((role) => role.roleId && role.roleName);
 };
 
-export const peekCachedDistricts = (): District[] => readCache<District[]>(DISTRICTS_CACHE_KEY) ?? [];
-
-export const peekCachedRoles = (): Role[] => readCache<Role[]>(ROLES_CACHE_KEY) ?? [];
-
-export const peekCachedBlocks = (districtId: number | string): SignupBlockOption[] =>
-  readCache<SignupBlockOption[]>(`${BLOCKS_CACHE_PREFIX}_${districtId}`) ?? [];
-
 export const getDistricts = async (): Promise<District[]> => {
-  const cached = readCache<District[]>(DISTRICTS_CACHE_KEY);
-  if (cached) {
-    return cached;
-  }
-
   if (!districtsPromise) {
     districtsPromise = getWithFallback<unknown>([
       '/master/districts',
@@ -132,11 +77,7 @@ export const getDistricts = async (): Promise<District[]> => {
       '/districts',
       '/district',
     ])
-      .then((response) => {
-        const data = toDistrictOptions(response);
-        writeCache(DISTRICTS_CACHE_KEY, data);
-        return data;
-      })
+      .then((response) => toDistrictOptions(response))
       .finally(() => {
         districtsPromise = null;
       });
@@ -146,12 +87,6 @@ export const getDistricts = async (): Promise<District[]> => {
 };
 
 export const getBlocks = async (districtId: number | string): Promise<SignupBlockOption[]> => {
-  const cacheKey = `${BLOCKS_CACHE_PREFIX}_${districtId}`;
-  const cached = readCache<SignupBlockOption[]>(cacheKey);
-  if (cached) {
-    return cached;
-  }
-
   const promiseKey = String(districtId);
   if (!blockPromises.has(promiseKey)) {
     blockPromises.set(
@@ -162,11 +97,7 @@ export const getBlocks = async (districtId: number | string): Promise<SignupBloc
         `/block/${districtId}`,
         `/blocks/${districtId}`,
       ])
-        .then((response) => {
-          const data = toBlockOptions(response);
-          writeCache(cacheKey, data);
-          return data;
-        })
+        .then((response) => toBlockOptions(response))
         .finally(() => {
           blockPromises.delete(promiseKey);
         }),
@@ -177,11 +108,6 @@ export const getBlocks = async (districtId: number | string): Promise<SignupBloc
 };
 
 export const getRoles = async (): Promise<Role[]> => {
-  const cached = readCache<Role[]>(ROLES_CACHE_KEY);
-  if (cached) {
-    return cached;
-  }
-
   if (!rolesPromise) {
     rolesPromise = getWithFallback<unknown>([
       '/Role',
@@ -190,11 +116,7 @@ export const getRoles = async (): Promise<Role[]> => {
       '/master/role',
       '/master/roles',
     ])
-      .then((response) => {
-        const data = toRoleOptions(response);
-        writeCache(ROLES_CACHE_KEY, data);
-        return data;
-      })
+      .then((response) => toRoleOptions(response))
       .finally(() => {
         rolesPromise = null;
       });
@@ -214,8 +136,11 @@ export const getGramPanchayats = async (blockId: number | string): Promise<GramP
 };
 
 export const getDashboardCounts = async (): Promise<DashboardCount[]> => {
-  const response = await api.get(DASHBOARD_COUNTS_API_URL);
-  return Array.isArray(response.data) ? response.data as DashboardCount[] : [];
+  const response = await getWithFallback<unknown>([
+    '/master/dashboard-counts',
+    '/dashboard-counts',
+  ]);
+  return Array.isArray(response) ? response as DashboardCount[] : [];
 };
 
 export const masterService = {

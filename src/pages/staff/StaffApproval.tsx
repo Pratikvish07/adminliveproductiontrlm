@@ -1,7 +1,7 @@
 import React from 'react';
 import Loader from '../../components/common/Loader';
 import { staffService } from '../../services/staffService';
-import { getApprovalBucket, getStaffRoleLabel, resolveStaffId } from './staffUtils';
+import { getStaffRoleLabel, resolveStaffId, toStaffRecords } from './staffUtils';
 import type { PendingStaffRecord } from '../../types/common.types';
 import { isStaffApprovalRoleId } from '../../utils/roleAccess';
 import './StaffApproval.css';
@@ -9,14 +9,6 @@ import './StaffApproval.css';
 type TabKey = 'pending' | 'approved' | 'rejected';
 
 type StaffApprovalLists = Record<TabKey, PendingStaffRecord[]>;
-
-type StaffApprovalCache = {
-  lists: StaffApprovalLists;
-  cachedAt: number;
-};
-
-const STAFF_APPROVAL_CACHE_KEY = 'trlm_staff_approval_cache_v1';
-const STAFF_APPROVAL_CACHE_TTL_MS = 15 * 60 * 1000;
 
 const TABS: Array<{ key: TabKey; label: string; icon: string }> = [
   { key: 'pending', label: 'Pending', icon: '...' },
@@ -38,50 +30,18 @@ const isStaffApprovalRecord = (staff: PendingStaffRecord): boolean =>
     staff.roleId ?? staff.RoleId ?? staff.role ?? staff.roleName ?? staff.RoleName ?? staff.userRole,
   );
 
-const readApprovalCache = (): StaffApprovalCache | null => {
-  try {
-    const raw = localStorage.getItem(STAFF_APPROVAL_CACHE_KEY);
-    if (!raw) {
-      return null;
-    }
-
-    const parsed = JSON.parse(raw) as StaffApprovalCache;
-    if (Date.now() - parsed.cachedAt > STAFF_APPROVAL_CACHE_TTL_MS) {
-      localStorage.removeItem(STAFF_APPROVAL_CACHE_KEY);
-      return null;
-    }
-
-    return parsed;
-  } catch {
-    localStorage.removeItem(STAFF_APPROVAL_CACHE_KEY);
-    return null;
-  }
-};
-
-const writeApprovalCache = (lists: StaffApprovalLists): void => {
-  try {
-    const payload: StaffApprovalCache = {
-      lists,
-      cachedAt: Date.now(),
-    };
-    localStorage.setItem(STAFF_APPROVAL_CACHE_KEY, JSON.stringify(payload));
-  } catch {
-    // Ignore storage failures and continue with the live response.
-  }
-};
+const normalizeApprovalRecords = (value: unknown): PendingStaffRecord[] =>
+  toStaffRecords(value).map((record) => record as PendingStaffRecord);
 
 const StaffApproval: React.FC = () => {
   const hasLoadedRef = React.useRef(false);
-  const cached = React.useMemo(() => readApprovalCache(), []);
   const [activeTab, setActiveTab] = React.useState<TabKey>('pending');
-  const [lists, setLists] = React.useState<StaffApprovalLists>(
-    cached?.lists ?? {
-      pending: [],
-      approved: [],
-      rejected: [],
-    },
-  );
-  const [loading, setLoading] = React.useState(!cached);
+  const [lists, setLists] = React.useState<StaffApprovalLists>({
+    pending: [],
+    approved: [],
+    rejected: [],
+  });
+  const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState('');
   const [approvingId, setApprovingId] = React.useState('');
   const [rejectingId, setRejectingId] = React.useState('');
@@ -97,26 +57,21 @@ const StaffApproval: React.FC = () => {
     setLoading(true);
     setError('');
 
-    const [pendingRes, allUsersRes] = await Promise.allSettled([
+    const [pendingRes, approvedRes, rejectedRes] = await Promise.allSettled([
       staffService.getPendingStaff(),
-      staffService.getAllUsers(),
+      staffService.getApprovedStaff(),
+      staffService.getRejectedStaff(),
     ]);
 
-    const pending = pendingRes.status === 'fulfilled' ? pendingRes.value.filter(isStaffApprovalRecord) : [];
-    const allUsers = allUsersRes.status === 'fulfilled' ? allUsersRes.value.filter(isStaffApprovalRecord) : [];
-    const pendingIds = new Set(
-      pending
-        .map((staff) => resolveStaffId(staff))
-        .filter((staffId): staffId is string => Boolean(staffId)),
-    );
-    const approved = allUsers.filter((staff) => {
-      const staffId = resolveStaffId(staff);
-      return !pendingIds.has(staffId ?? '') && getApprovalBucket(staff) === 'approved';
-    });
-    const rejected = allUsers.filter((staff) => {
-      const staffId = resolveStaffId(staff);
-      return !pendingIds.has(staffId ?? '') && getApprovalBucket(staff) === 'rejected';
-    });
+    const pending = pendingRes.status === 'fulfilled'
+      ? normalizeApprovalRecords(pendingRes.value).filter(isStaffApprovalRecord)
+      : [];
+    const approved = approvedRes.status === 'fulfilled'
+      ? normalizeApprovalRecords(approvedRes.value).filter(isStaffApprovalRecord)
+      : [];
+    const rejected = rejectedRes.status === 'fulfilled'
+      ? normalizeApprovalRecords(rejectedRes.value).filter(isStaffApprovalRecord)
+      : [];
 
     const nextLists: StaffApprovalLists = {
       pending,
@@ -125,25 +80,28 @@ const StaffApproval: React.FC = () => {
     };
 
     setLists(nextLists);
-    writeApprovalCache(nextLists);
 
-    const allFailed = [pendingRes, allUsersRes].every((result) => result.status === 'rejected');
-    if (allFailed) {
-      setError(
-        cached?.lists
-          ? 'Live staff APIs are unavailable, so cached approval data is being shown.'
-          : 'Could not load staff data. Please refresh.',
-      );
-    } else if (pendingRes.status === 'rejected') {
-      setError(
-        cached?.lists
-          ? 'Pending staff API returned a server error, so cached approval data is being shown.'
-          : 'Pending staff API returned a server error.',
-      );
+    if ([pendingRes, approvedRes, rejectedRes].every((result) => result.status === 'rejected')) {
+      setError('Could not load staff data. Please refresh.');
+    } else {
+      const failedSections: string[] = [];
+      if (pendingRes.status === 'rejected') {
+        failedSections.push('pending');
+      }
+      if (approvedRes.status === 'rejected') {
+        failedSections.push('approved');
+      }
+      if (rejectedRes.status === 'rejected') {
+        failedSections.push('rejected');
+      }
+
+      if (failedSections.length > 0) {
+        setError(`Some staff lists could not be loaded: ${failedSections.join(', ')}.`);
+      }
     }
 
     setLoading(false);
-  }, [cached?.lists]);
+  }, []);
 
   React.useEffect(() => {
     if (hasLoadedRef.current) {
@@ -153,14 +111,10 @@ const StaffApproval: React.FC = () => {
     hasLoadedRef.current = true;
     void loadAll().catch((err) => {
       console.error('[StaffApproval] loadAll failed', err);
-      setError(
-        cached?.lists
-          ? 'Live staff APIs failed, so cached approval data is being shown.'
-          : 'Failed to load staff data.',
-      );
+      setError('Failed to load staff data.');
       setLoading(false);
     });
-  }, [cached?.lists, loadAll]);
+  }, [loadAll]);
 
   const handleApprove = async (staffId: string) => {
     setApprovingId(staffId);

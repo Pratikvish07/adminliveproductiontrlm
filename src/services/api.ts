@@ -5,8 +5,8 @@ import {
   getStoredToken,
 } from '../utils/authStorage';
 
-const rawBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
-const API_BASE_URL = rawBaseUrl.replace(/\/+$/, '');
+const rawBaseUrl = import.meta.env.VITE_API_URL;
+const API_BASE_URL = String(rawBaseUrl ?? '').replace(/\/+$/, '');
 const API_TIMEOUT_MS = Number(import.meta.env.VITE_API_TIMEOUT_MS || 45000);
 const getNormalizedUrl = (url: unknown): string => (typeof url === 'string' ? url : '');
 const isPublicAuthRoute = (url: string): boolean => url === '/admin/login' || url === '/admin/signup';

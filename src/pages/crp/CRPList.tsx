@@ -10,14 +10,6 @@ import { useResolvedScope } from '../../utils/useResolvedScope';
 import { getCRPid, toCRPRecords, type CRPRecordProcessed } from './crpUtils';
 import './CRPList.css';
 
-const CRP_LIST_CACHE_KEY = 'trlm_crp_list_cache_v2';
-const CRP_LIST_CACHE_TTL_MS = 15 * 60 * 1000;
-
-type CRPListCache = {
-  records: CRPRecordProcessed[];
-  cachedAt: number;
-};
-
 const STATUS_COLORS: Record<string, string> = {
   Approved: '#1f9d6e',
   Pending:  '#f29f05',
@@ -33,28 +25,6 @@ const APPROVAL_STATUS_MAP: Record<number, string> = {
   1: 'Approved',
   0: 'Pending',
   2: 'Rejected',
-};
-
-const readCRPCache = (): CRPListCache | null => {
-  try {
-    const raw = localStorage.getItem(CRP_LIST_CACHE_KEY);
-    if (!raw) return null;
-
-    const parsed = JSON.parse(raw) as CRPListCache;
-    if (Date.now() - parsed.cachedAt > CRP_LIST_CACHE_TTL_MS) {
-      localStorage.removeItem(CRP_LIST_CACHE_KEY);
-      return null;
-    }
-    return parsed;
-  } catch {
-    localStorage.removeItem(CRP_LIST_CACHE_KEY);
-    return null;
-  }
-};
-
-const getLastUpdatedText = (cachedAt: number): string => {
-  const diffMinutes = Math.max(0, Math.floor((Date.now() - cachedAt) / 60000));
-  return diffMinutes === 0 ? 'Updated just now' : `Updated ${diffMinutes} min ago`;
 };
 
 const formatCount = (value: number): string =>
@@ -285,20 +255,14 @@ const CRPList: React.FC = () => {
   const { user } = useAuth();
   const { scopedUser } = useResolvedScope(user);
   const hasLoadedRef = React.useRef(false);
-  const cached = React.useMemo(() => readCRPCache(), []);
-  const [records, setRecords] = React.useState<CRPRecordProcessed[]>(cached?.records ?? []);
-  const [loading, setLoading] = React.useState(!cached);
-  const [isRefreshing, setIsRefreshing] = React.useState(false);
+  const [records, setRecords] = React.useState<CRPRecordProcessed[]>([]);
+  const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState('');
-  const [lastUpdatedText, setLastUpdatedText] = React.useState(
-    cached ? getLastUpdatedText(cached.cachedAt) : '',
-  );
 
-  const loadCRPList = React.useCallback(async (refreshOnly: boolean) => {
+  const loadCRPList = React.useCallback(async () => {
     try {
       setError('');
-      setIsRefreshing(refreshOnly);
-      setLoading(!refreshOnly && records.length === 0);
+      setLoading(true);
 
       const response = await crpService.getCRPList();
       const scopedRecords = filterByDistrictAndBlock(
@@ -311,24 +275,19 @@ const CRPList: React.FC = () => {
       const enriched  = await enrichCRPRecords(scopedRecords, processed);
 
       setRecords(enriched);
-
-      const nextCache: CRPListCache = { records: enriched, cachedAt: Date.now() };
-      localStorage.setItem(CRP_LIST_CACHE_KEY, JSON.stringify(nextCache));
-      setLastUpdatedText(getLastUpdatedText(nextCache.cachedAt));
     } catch (err) {
       console.error('[CRPList] Failed to load records', err);
-      setError('Live CRP list is unavailable right now, so cached data is being shown when available.');
+      setError('Live CRP list is unavailable right now.');
     } finally {
       setLoading(false);
-      setIsRefreshing(false);
     }
-  }, [records.length, scopedUser]);
+  }, [scopedUser]);
 
   React.useEffect(() => {
     if (hasLoadedRef.current) return;
     hasLoadedRef.current = true;
-    void loadCRPList(Boolean(cached?.records.length));
-  }, [cached?.records.length, loadCRPList]);
+    void loadCRPList();
+  }, [loadCRPList]);
 
   // ------------------------------------------------------------------
   // Derived state
@@ -451,9 +410,8 @@ const CRPList: React.FC = () => {
             directly to what the API returns for your current scope.
           </p>
           <div className="crp-hero__status">
-            {lastUpdatedText && <span>{lastUpdatedText}</span>}
-            {isRefreshing && <span className="crp-status-badge">Refreshing</span>}
-            {error && <span className="crp-status-badge crp-status-badge--warn">Cached</span>}
+            {loading && <span className="crp-status-badge">Loading</span>}
+            {error && <span className="crp-status-badge crp-status-badge--warn">API Error</span>}
           </div>
         </div>
 

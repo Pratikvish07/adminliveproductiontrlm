@@ -13,9 +13,12 @@ export const toStaffRecords = (value: unknown): StaffRecord[] => {
   }
 
   if (value && typeof value === 'object') {
-    const maybeData = (value as { data?: unknown }).data;
-    if (Array.isArray(maybeData)) {
-      return maybeData.filter((item): item is StaffRecord => typeof item === 'object' && item !== null);
+    const record = value as Record<string, unknown>;
+    for (const key of ['data', 'items', 'records', 'users', 'result', 'payload']) {
+      const candidate = record[key];
+      if (Array.isArray(candidate)) {
+        return candidate.filter((item): item is StaffRecord => typeof item === 'object' && item !== null);
+      }
     }
   }
 

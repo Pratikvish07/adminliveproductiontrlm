@@ -4,23 +4,9 @@ import { useAuth } from '../../context/AuthContext';
 import { getUserRoleId, ROLE_IDS } from '../../utils/roleAccess';
 import './Dashboard.css';
 
-const DASHBOARD_CACHE_KEY = 'trlm_dashboard_summary_v1';
-const DASHBOARD_CACHE_TTL_MS = 30 * 60 * 1000;
-const FALLBACK_COUNTS = [
-  { title: 'Blocks', totalCount: 58 },
-  { title: 'Districts', totalCount: 8 },
-  { title: 'Gram Panchayats', totalCount: 1178 },
-  { title: 'Villages', totalCount: 11198 },
-];
-
 type DashboardCountItem = {
   title: string;
   totalCount: number;
-};
-
-type DashboardCache = {
-  counts: DashboardCountItem[];
-  cachedAt: number;
 };
 
 const METRIC_ACCENTS: Record<string, string> = {
@@ -28,29 +14,6 @@ const METRIC_ACCENTS: Record<string, string> = {
   Districts: '#1f78b4',
   'Gram Panchayats': '#f29f05',
   Villages: '#e15759',
-};
-
-const readDashboardCache = (): DashboardCache | null => {
-  try {
-    const rawCache = localStorage.getItem(DASHBOARD_CACHE_KEY);
-    if (!rawCache) {
-      return null;
-    }
-
-    const cache = JSON.parse(rawCache) as DashboardCache;
-    const isExpired = Date.now() - cache.cachedAt > DASHBOARD_CACHE_TTL_MS;
-
-    if (isExpired) {
-      localStorage.removeItem(DASHBOARD_CACHE_KEY);
-      return null;
-    }
-
-    return cache;
-  } catch (err) {
-    console.error('Failed to read dashboard cache', err);
-    localStorage.removeItem(DASHBOARD_CACHE_KEY);
-    return null;
-  }
 };
 
 const formatNumber = (value: number): string => new Intl.NumberFormat('en-IN').format(value);
@@ -68,24 +31,13 @@ const buildScopedCounts = (
     .map((item) => ({ title: item.Title, totalCount: 1 }));
 };
 
-const getLastUpdatedText = (cachedAt: number): string => {
-  const diffMs = Date.now() - cachedAt;
-  const diffMinutes = Math.max(0, Math.floor(diffMs / 60000));
-  return diffMinutes === 0 ? 'Updated just now' : `Updated ${diffMinutes} min ago`;
-};
-
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
   const roleId = getUserRoleId(user);
   const hasLoadedRef = React.useRef(false);
-  const cachedDashboard = React.useMemo(() => readDashboardCache(), []);
-  const [counts, setCounts] = React.useState<DashboardCountItem[]>(cachedDashboard?.counts ?? []);
+  const [counts, setCounts] = React.useState<DashboardCountItem[]>([]);
   const [error, setError] = React.useState('');
-  const [loading, setLoading] = React.useState(!cachedDashboard);
-  const [isRefreshing, setIsRefreshing] = React.useState(false);
-  const [lastUpdatedText, setLastUpdatedText] = React.useState(
-    cachedDashboard ? getLastUpdatedText(cachedDashboard.cachedAt) : '',
-  );
+  const [loading, setLoading] = React.useState(true);
 
   React.useEffect(() => {
     if (hasLoadedRef.current) {
@@ -97,8 +49,7 @@ const Dashboard: React.FC = () => {
 
     const loadDashboard = async () => {
       try {
-        setIsRefreshing(counts.length > 0);
-        setLoading(counts.length === 0);
+        setLoading(true);
         const countResult = await masterService.getDashboardCounts();
 
         if (cancelled) {
@@ -108,13 +59,6 @@ const Dashboard: React.FC = () => {
         const scopedCounts = buildScopedCounts(countResult, roleId);
         setCounts(scopedCounts);
         setError('');
-
-        const cache: DashboardCache = {
-          counts: scopedCounts,
-          cachedAt: Date.now(),
-        };
-        localStorage.setItem(DASHBOARD_CACHE_KEY, JSON.stringify(cache));
-        setLastUpdatedText(getLastUpdatedText(cache.cachedAt));
       } catch (err) {
         console.error('Failed to load dashboard counts', err);
 
@@ -122,20 +66,11 @@ const Dashboard: React.FC = () => {
           return;
         }
 
-        if (counts.length === 0) {
-          const fallbackCounts = roleId === ROLE_IDS.STATE_ADMIN
-            ? FALLBACK_COUNTS
-            : FALLBACK_COUNTS
-              .filter((item) => item.title === 'Districts')
-              .map((item) => ({ title: item.title, totalCount: 1 }));
-          setCounts(fallbackCounts);
-        }
-
-        setError('Live dashboard feed is temporarily unavailable, so fallback counts are being rendered.');
+        setCounts([]);
+        setError('Live dashboard data could not be loaded.');
       } finally {
         if (!cancelled) {
           setLoading(false);
-          setIsRefreshing(false);
         }
       }
     };
@@ -145,17 +80,9 @@ const Dashboard: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [counts.length, roleId]);
+  }, [roleId]);
 
-  const visualCounts = React.useMemo(() => {
-    if (counts.length > 0) {
-      return counts;
-    }
-
-    return roleId === ROLE_IDS.STATE_ADMIN
-      ? FALLBACK_COUNTS
-      : [{ title: 'Districts', totalCount: 1 }];
-  }, [counts, roleId]);
+  const visualCounts = counts;
 
   const maxValue = React.useMemo(
     () => Math.max(...visualCounts.map((item) => item.totalCount), 1),
@@ -168,6 +95,10 @@ const Dashboard: React.FC = () => {
   );
 
   const chartPoints = React.useMemo(() => {
+    if (visualCounts.length === 0) {
+      return '';
+    }
+
     if (visualCounts.length === 1) {
       return '20,88 280,24';
     }
@@ -192,36 +123,61 @@ const Dashboard: React.FC = () => {
             and density charts driven by the live master dashboard counts API.
           </p>
           <div className="dashboard-status">
-            {lastUpdatedText && <span>{lastUpdatedText}</span>}
-            {isRefreshing && <span className="dashboard-status-badge">Refreshing</span>}
-            {loading && counts.length === 0 && <span className="dashboard-status-badge">Loading</span>}
+            {loading && <span className="dashboard-status-badge">Loading</span>}
+            {error && <span className="dashboard-status-badge">API Error</span>}
           </div>
         </div>
 
         <div className="dashboard-hero-viz">
           <div className="dashboard-total-label">Total master records</div>
           <div className="dashboard-total-value">{formatNumber(totalValue)}</div>
-          <svg className="dashboard-sparkline" viewBox="0 0 300 100" preserveAspectRatio="none" aria-hidden="true">
-            <defs>
-              <linearGradient id="dashboardSpark" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stopColor="#6ec5ff" />
-                <stop offset="50%" stopColor="#ffd166" />
-                <stop offset="100%" stopColor="#ff6b6b" />
-              </linearGradient>
-            </defs>
-            <polyline points={chartPoints} />
-            {visualCounts.map((item, index) => {
-              const x = visualCounts.length === 1 ? 150 : 20 + (260 / (visualCounts.length - 1)) * index;
-              const y = visualCounts.length === 1 ? 24 : 88 - (item.totalCount / maxValue) * 64;
-              return <circle key={item.title} cx={x} cy={y} r="4.5" />;
-            })}
-          </svg>
+          {visualCounts.length > 0 && (
+            <svg className="dashboard-sparkline" viewBox="0 0 300 100" preserveAspectRatio="none" aria-hidden="true">
+              <defs>
+                <linearGradient id="dashboardSpark" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stopColor="#6ec5ff" />
+                  <stop offset="50%" stopColor="#ffd166" />
+                  <stop offset="100%" stopColor="#ff6b6b" />
+                </linearGradient>
+              </defs>
+              <polyline points={chartPoints} />
+              {visualCounts.map((item, index) => {
+                const x = visualCounts.length === 1 ? 150 : 20 + (260 / (visualCounts.length - 1)) * index;
+                const y = visualCounts.length === 1 ? 24 : 88 - (item.totalCount / maxValue) * 64;
+                return <circle key={item.title} cx={x} cy={y} r="4.5" />;
+              })}
+            </svg>
+          )}
         </div>
       </section>
 
       {error && <div className="dashboard-alert">{error}</div>}
 
       <section className="dashboard-grid">
+        {loading && visualCounts.length === 0 && (
+          <article className="dashboard-panel dashboard-panel--wide">
+            <div className="panel-head">
+              <div>
+                <span className="panel-eyebrow">Live Feed</span>
+                <h2>Loading dashboard data</h2>
+              </div>
+            </div>
+          </article>
+        )}
+
+        {!loading && visualCounts.length === 0 && (
+          <article className="dashboard-panel dashboard-panel--wide">
+            <div className="panel-head">
+              <div>
+                <span className="panel-eyebrow">Live Feed</span>
+                <h2>No dashboard data available</h2>
+              </div>
+            </div>
+          </article>
+        )}
+
+        {visualCounts.length > 0 && (
+          <>
         <article className="dashboard-panel dashboard-panel--wide">
           <div className="panel-head">
             <div>
@@ -342,6 +298,8 @@ const Dashboard: React.FC = () => {
             })}
           </div>
         </article>
+          </>
+        )}
       </section>
     </div>
   );

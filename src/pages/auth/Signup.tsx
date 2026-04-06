@@ -8,9 +8,6 @@ import {
   getDistricts,
   getBlocks,
   getRoles,
-  peekCachedDistricts,
-  peekCachedRoles,
-  peekCachedBlocks,
 } from "../../services/masterService";
 import type { SignupBlockOption } from "../../services/masterService";
 import { getUserRoleId, ROLE_IDS } from "../../utils/roleAccess";
@@ -56,18 +53,14 @@ const Signup: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const hasLoadedMasterRef = React.useRef(false);
-  const cachedDistricts = React.useMemo(() => peekCachedDistricts(), []);
-  const cachedRoles = React.useMemo(() => peekCachedRoles(), []);
 
   const [formData, setFormData]   = useState<FormState>(INITIAL_FORM);
-  const [districts, setDistricts] = useState<District[]>(cachedDistricts);
+  const [districts, setDistricts] = useState<District[]>([]);
   const [blocks, setBlocks]       = useState<SignupBlockOption[]>([]);
-  const [roles, setRoles]         = useState<Role[]>(cachedRoles);
+  const [roles, setRoles]         = useState<Role[]>([]);
 
   const [loading, setLoading]         = useState(false);
-  const [masterLoading, setMasterLoading] = useState(
-    cachedDistricts.length === 0 || cachedRoles.length === 0
-  );
+  const [masterLoading, setMasterLoading] = useState(true);
   const [blocksLoading, setBlocksLoading] = useState(false);
   const [error, setError]             = useState("");
   const [success, setSuccess]         = useState(false);
@@ -130,12 +123,6 @@ const Signup: React.FC = () => {
     if (!formData.districtId) {
       setBlocks([]);
       setFormData((prev) => ({ ...prev, blockId: "" }));
-      return;
-    }
-    const cached = peekCachedBlocks(formData.districtId);
-    if (cached.length > 0) {
-      setBlocks(cached);
-      setBlocksLoading(false);
       return;
     }
     setBlocksLoading(true);
@@ -225,8 +212,8 @@ const Signup: React.FC = () => {
 
     /* ── Build payload matching API contract exactly ──────────── */
     const payload = {
-      districtName:        selectedDistrict.districtName.trim(),
-      blockName:           selectedBlock.blockName.trim(),
+      districtName:        selectedDistrict.districtId.toString().trim(),
+      blockName:           selectedBlock.blockId.toString().trim(),
       officialName:        formData.officialName.trim(),
       contactNumber:       formData.contactNumber.trim(),
       officialEmail:       formData.officialEmail.trim().toLowerCase(),
