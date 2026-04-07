@@ -65,7 +65,12 @@ const Village: React.FC = () => {
         const response = await masterService.getBlocks(selectedDistrictId);
         setBlocks(response);
         setGramPanchayats([]);
-        setSelectedBlockId('');
+        setSelectedBlockId((current) => {
+          if (isBlockStaff && user?.blockId) {
+            return String(user.blockId);
+          }
+          return current && response.some((block) => String(block.BlockId) === String(current)) ? current : '';
+        });
         setSelectedGpId('');
         setVillages([]);
       } catch (err) {
@@ -77,7 +82,7 @@ const Village: React.FC = () => {
     };
 
     loadBlocks();
-  }, [selectedDistrictId]);
+  }, [isBlockStaff, selectedDistrictId, user?.blockId]);
 
   React.useEffect(() => {
     const loadGramPanchayats = async () => {
@@ -232,7 +237,7 @@ const Village: React.FC = () => {
           </table>
         ) : (
           <div className="master-empty">
-            {selectedGpId ? 'No village records found.' : 'Select district, block, and gram panchayat to view villages.'}
+            {selectedGpId ? 'No village records found.' : isBlockStaff ? 'Select gram panchayat to view villages.' : 'Select district, block, and gram panchayat to view villages.'}
           </div>
         )}
       </div>

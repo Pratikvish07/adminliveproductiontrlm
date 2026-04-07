@@ -1,4 +1,4 @@
-import type { PendingStaffRecord, StaffActionRequest } from '../types/common.types';
+import type { PendingStaffRecord } from '../types/common.types';
 import api from './api';
 import { getWithFallback } from './requestFallback';
 
@@ -7,6 +7,7 @@ type StaffService = {
   getPendingStaff: () => Promise<PendingStaffRecord[]>;
   getApprovedStaff: () => Promise<PendingStaffRecord[]>;
   getRejectedStaff: () => Promise<PendingStaffRecord[]>;
+  updateUser: (payload: Record<string, unknown>) => Promise<unknown>;
   approveStaff: (staffId: string) => Promise<unknown>;
   rejectStaff: (staffId: string) => Promise<unknown>;
 };
@@ -91,15 +92,18 @@ export const staffService: StaffService = {
     ]);
   },
 
+  updateUser: async (payload: Record<string, unknown>) => {
+    const response = await api.put('/admin/update-user', payload);
+    return response.data;
+  },
+
   approveStaff: async (staffId: string) => {
-    const payload: StaffActionRequest = { staffId };
-    const response = await api.post('/admin/approve', payload);
+    const response = await api.post(`/admin/approve/${staffId}`);
     return response.data;
   },
 
   rejectStaff: async (staffId: string) => {
-    const payload: StaffActionRequest = { staffId };
-    const response = await api.post('/admin/reject', payload);
+    const response = await api.post(`/admin/reject/${staffId}`);
     return response.data;
   },
 };

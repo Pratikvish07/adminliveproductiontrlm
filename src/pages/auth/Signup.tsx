@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 import Input from "../../components/common/Input";
 import Button from "../../components/common/Button";
 import { authService } from "../../services/authService";
@@ -51,6 +51,7 @@ const isStrongPw = (v: string) =>
 
 const Signup: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
   const hasLoadedMasterRef = React.useRef(false);
 
@@ -69,6 +70,9 @@ const Signup: React.FC = () => {
   const currentRoleId = getUserRoleId(user);
   const isDistrictStaff = currentRoleId === ROLE_IDS.DISTRICT_STAFF;
   const isBlockStaff = currentRoleId === ROLE_IDS.BLOCK_STAFF;
+  const isStateAdmin = currentRoleId === ROLE_IDS.STATE_ADMIN;
+  const isSelectedDistrictRole = formData.roleId === ROLE_IDS.DISTRICT_STAFF;
+  const isCreateUserMode = isStateAdmin && location.pathname === "/staff/create-user";
 
   const visibleDistricts = React.useMemo(() => {
     if (isDistrictStaff || isBlockStaff) {
@@ -125,6 +129,12 @@ const Signup: React.FC = () => {
       setFormData((prev) => ({ ...prev, blockId: "" }));
       return;
     }
+    if (isSelectedDistrictRole) {
+      setBlocks([]);
+      setBlocksLoading(false);
+      setFormData((prev) => ({ ...prev, blockId: "" }));
+      return;
+    }
     setBlocksLoading(true);
     setBlocks([]);
     setFormData((prev) => ({ ...prev, blockId: "" }));
@@ -132,7 +142,7 @@ const Signup: React.FC = () => {
       .then((res: SignupBlockOption[]) => setBlocks(res || []))
       .catch(() => setBlocks([]))
       .finally(() => setBlocksLoading(false));
-  }, [formData.districtId]);
+  }, [formData.districtId, isSelectedDistrictRole]);
 
   useEffect(() => {
     if (isDistrictStaff || isBlockStaff) {
@@ -165,8 +175,8 @@ const Signup: React.FC = () => {
   /* ── Client-side validation ─────────────────────────────────── */
   const validate = (): string => {
     if (!formData.districtId)          return "Please select a District.";
-    if (!formData.blockId)             return "Please select a Block.";
     if (!formData.roleId)              return "Please select a Role.";
+    if (!isSelectedDistrictRole && !formData.blockId) return "Please select a Block.";
     if (!formData.officialName.trim()) return "Official name is required.";
     if (!isPhone(formData.contactNumber))
                                        return "Enter a valid 10-digit mobile number.";
@@ -198,14 +208,14 @@ const Signup: React.FC = () => {
     const selectedDistrict = visibleDistricts.find(
       (d) => String(d.districtId) === String(formData.districtId)
     );
-    const selectedBlock = visibleBlocks.find(
-      (b) => String(b.blockId) === String(formData.blockId)
-    );
+    const selectedBlock = isSelectedDistrictRole
+      ? null
+      : visibleBlocks.find((b) => String(b.blockId) === String(formData.blockId));
     const selectedRole = visibleRoles.find(
       (r) => String(r.roleId) === String(formData.roleId)
     );
 
-    if (!selectedDistrict || !selectedBlock || !selectedRole) {
+    if (!selectedDistrict || !selectedRole || (!isSelectedDistrictRole && !selectedBlock)) {
       setError("Could not resolve selection. Please re-select and try again.");
       return;
     }
@@ -213,7 +223,7 @@ const Signup: React.FC = () => {
     /* ── Build payload matching API contract exactly ──────────── */
     const payload = {
       districtName:        selectedDistrict.districtId.toString().trim(),
-      blockName:           selectedBlock.blockId.toString().trim(),
+      blockName:           selectedBlock ? selectedBlock.blockId.toString().trim() : "",
       officialName:        formData.officialName.trim(),
       contactNumber:       formData.contactNumber.trim(),
       officialEmail:       formData.officialEmail.trim().toLowerCase(),
@@ -229,7 +239,13 @@ const Signup: React.FC = () => {
     try {
       await authService.signup(payload);
       setSuccess(true);
-      setTimeout(() => navigate("/login"), 2000);
+      if (isCreateUserMode) {
+        setFormData(INITIAL_FORM);
+        setBlocks([]);
+        window.setTimeout(() => setSuccess(false), 2000);
+      } else {
+        setTimeout(() => navigate("/login"), 2000);
+      }
     } catch (err: any) {
       console.error("[Signup] Error →", err);
       const status = err?.response?.status;
@@ -254,8 +270,8 @@ const Signup: React.FC = () => {
       <div className="signup-page">
         <div className="signup-success">
           <div className="success-icon">✓</div>
-          <h3>Account Created!</h3>
-          <p>Redirecting you to login…</p>
+          <h3>{isCreateUserMode ? "User Created!" : "Account Created!"}</h3>
+          <p>{isCreateUserMode ? "The new user has been created successfully." : "Redirecting you to login…"}</p>
         </div>
       </div>
     );
@@ -271,7 +287,7 @@ const Signup: React.FC = () => {
           <img src="/assets/logo.jpg" alt="TRLM Logo" className="signup-logo" />
           <div>
             <p className="signup-org-tag">TRLM Operations Console</p>
-            <h2 className="signup-title">Create your account</h2>
+            <h2 className="signup-title">{isCreateUserMode ? "Create user account" : "Create your account"}</h2>
           </div>
         </div>
 
@@ -318,32 +334,33 @@ const Signup: React.FC = () => {
                   </select>
                 </div>
 
-                {/* Block */}
-                <div className="signup-field">
-                  <label className="signup-label" htmlFor="blockId">Block</label>
-                  <div className="signup-select-wrap">
-                    <select
-                      id="blockId"
-                      name="blockId"
-                      className="signup-select"
-                      value={formData.blockId}
-                      onChange={handleChange}
-                      disabled={!formData.districtId || blocksLoading || isBlockStaff}
-                    >
-                      <option value="">
-                        {blocksLoading ? "Loading…" : isBlockStaff ? "Assigned Block" : "Select Block"}
-                      </option>
-                      {visibleBlocks.map((b) => (
-                        <option key={b.blockId} value={b.blockId}>
-                          {b.blockName}
+                {!isSelectedDistrictRole && (
+                  <div className="signup-field">
+                    <label className="signup-label" htmlFor="blockId">Block</label>
+                    <div className="signup-select-wrap">
+                      <select
+                        id="blockId"
+                        name="blockId"
+                        className="signup-select"
+                        value={formData.blockId}
+                        onChange={handleChange}
+                        disabled={!formData.districtId || blocksLoading || isBlockStaff}
+                      >
+                        <option value="">
+                          {blocksLoading ? "Loading…" : isBlockStaff ? "Assigned Block" : "Select Block"}
                         </option>
-                      ))}
-                    </select>
-                    {blocksLoading && (
-                      <span className="signup-spinner signup-spinner--inline" aria-hidden="true" />
-                    )}
+                        {visibleBlocks.map((b) => (
+                          <option key={b.blockId} value={b.blockId}>
+                            {b.blockName}
+                          </option>
+                        ))}
+                      </select>
+                      {blocksLoading && (
+                        <span className="signup-spinner signup-spinner--inline" aria-hidden="true" />
+                      )}
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* Role */}
                 <div className="signup-field">
@@ -490,7 +507,7 @@ const Signup: React.FC = () => {
                   </>
                 ) : (
                   <>
-                    Create Account
+                    {isCreateUserMode ? "Create User" : "Create Account"}
                     <span className="signup-btn-arrow" aria-hidden="true">→</span>
                   </>
                 )}
@@ -501,10 +518,12 @@ const Signup: React.FC = () => {
 
         {/* ── Footer ── */}
         <div className="signup-footer">
-          <p>
-            Already have an account?{" "}
-            <Link to="/login">Sign in</Link>
-          </p>
+          {!isCreateUserMode && (
+            <p>
+              Already have an account?{" "}
+              <Link to="/login">Sign in</Link>
+            </p>
+          )}
           <p className="signup-footer-note">
             🔒 Your data is protected under government security standards
           </p>

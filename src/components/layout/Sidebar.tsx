@@ -8,7 +8,6 @@ import {
   LogOut,
   Map,
   ShieldCheck,
-  Settings,
   Users,
 } from 'lucide-react';
 import { useSidebar } from '../../context/SidebarContext';
@@ -18,16 +17,14 @@ import { getRoleLabel, isBlockStaff, isDistrictStaff, isStateAdmin } from '../..
 const CRP_NAV_ITEMS = {
   admin: [
     { path: '/crp/list', label: 'CRP Management', icon: Map },
-    { path: '/crp/tracking', label: 'CRP Tracking', icon: ShieldCheck },
   ],
   district: [
     { path: '/crp/list', label: 'CRP Management', icon: Map },
-    { path: '/crp/tracking', label: 'CRP Tracking', icon: ShieldCheck },
   ],
   block: [
     { path: '/crp/approval', label: 'CRP Approval', icon: ShieldCheck },
+    { path: '/crp/create', label: 'Create CRP', icon: Users },
     { path: '/crp/list', label: 'CRP Management', icon: Map },
-    { path: '/crp/tracking', label: 'CRP Tracking', icon: ShieldCheck },
   ],
 } as const;
 
@@ -51,9 +48,9 @@ const Sidebar: React.FC = () => {
           items: [
             { path: '/staff/approval', label: 'Staff Approval', icon: ShieldCheck },
             { path: '/staff/users', label: 'All Users', icon: Users },
+            { path: '/staff/create-user', label: 'Create User', icon: Users },
             ...CRP_NAV_ITEMS.admin,
             { path: '/reports', label: 'Reports', icon: BarChart3 },
-            { path: '/settings', label: 'Settings', icon: Settings },
           ],
         },
       ];
@@ -68,8 +65,6 @@ const Sidebar: React.FC = () => {
         {
           label: 'Management',
           items: [
-            { path: '/master/village', label: 'Village Monitoring', icon: Map },
-            { path: '/master/gram-panchayat', label: 'GP Monitoring', icon: Map },
             ...CRP_NAV_ITEMS.district,
             { path: '/reports', label: 'Reports', icon: BarChart3 },
           ],
@@ -86,9 +81,8 @@ const Sidebar: React.FC = () => {
         {
           label: 'Operations',
           items: [
-            { path: '/master/village', label: 'Village Monitoring', icon: Map },
-            { path: '/master/gram-panchayat', label: 'GP Monitoring', icon: Map },
             ...CRP_NAV_ITEMS.block,
+            { path: '/reports', label: 'Reports', icon: BarChart3 },
           ],
         },
       ];
@@ -106,7 +100,6 @@ const Sidebar: React.FC = () => {
           { path: '/staff/users', label: 'All Users', icon: Users },
           ...CRP_NAV_ITEMS.block,
           { path: '/reports', label: 'Reports', icon: BarChart3 },
-          { path: '/settings', label: 'Settings', icon: Settings },
         ],
       },
     ];

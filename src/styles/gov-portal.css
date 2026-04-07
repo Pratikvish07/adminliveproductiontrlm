@@ -466,6 +466,12 @@
   gap: 0.9rem;
 }
 
+.gov-navbar__dropdown-avatar-wrap {
+  display: grid;
+  gap: 0.55rem;
+  justify-items: center;
+}
+
 .gov-navbar__dropdown-avatar {
   width: 3.15rem;
   height: 3.15rem;
@@ -478,6 +484,34 @@
   font-weight: 800;
   letter-spacing: 0.05em;
   box-shadow: 0 12px 26px rgba(20, 59, 97, 0.16);
+}
+
+.gov-navbar__dropdown-avatar-image {
+  width: 3.15rem;
+  height: 3.15rem;
+  object-fit: cover;
+  border-radius: 1rem;
+  border: 1px solid rgba(20, 59, 97, 0.08);
+  box-shadow: 0 12px 26px rgba(20, 59, 97, 0.16);
+}
+
+.gov-navbar__dropdown-upload {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 0.42rem 0.72rem;
+  background: rgba(20, 59, 97, 0.08);
+  color: var(--gov-primary);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.gov-navbar__dropdown-upload input {
+  display: none;
 }
 
 .gov-navbar__dropdown-identity {
@@ -525,6 +559,13 @@
   color: var(--gov-text);
   font-size: 0.92rem;
   word-break: break-word;
+}
+
+.gov-navbar__dropdown-error {
+  margin: 0.8rem 0 0;
+  color: var(--gov-danger);
+  font-size: 0.8rem;
+  font-weight: 600;
 }
 
 .gov-navbar__dropdown-item {

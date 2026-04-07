@@ -13,14 +13,13 @@ import StaffApproval from '../pages/staff/StaffApproval';
 // CRP
 import CRPList from '../pages/crp/CRPList';
 import CRPApproval from '../pages/crp/CRPApproval';
-import CRPTracking from '../pages/crp/CRPTracking';
+import CRPCreate from '../pages/crp/CRPCreate';
 import SHGMemberList from '../pages/crp/SHGMemberList';
 // Payment
 import LoanTracking from '../pages/payment/LoanTracking';
 import LoanApproval from '../pages/payment/LoanApproval';
 import Payments from '../pages/payment/Payments';
 import Reports from '../pages/reports/Reports';
-import Settings from '../pages/settings/Settings';
 import { ROLE_IDS } from '../utils/roleAccess';
 
 const AppRoutes: React.FC = () => {
@@ -59,6 +58,10 @@ const AppRoutes: React.FC = () => {
           path="/staff/users"
           element={<ProtectedRoute allowedRoles={[ROLE_IDS.STATE_ADMIN]}><AllUsers /></ProtectedRoute>}
         />
+        <Route
+          path="/staff/create-user"
+          element={<ProtectedRoute allowedRoles={[ROLE_IDS.STATE_ADMIN]}><Signup /></ProtectedRoute>}
+        />
         {/* CRP */}
         <Route
           path="/crp/list"
@@ -69,8 +72,8 @@ const AppRoutes: React.FC = () => {
           element={<ProtectedRoute allowedRoles={[ROLE_IDS.BLOCK_STAFF]}><CRPApproval /></ProtectedRoute>}
         />
         <Route
-          path="/crp/tracking"
-          element={<ProtectedRoute allowedRoles={[ROLE_IDS.STATE_ADMIN, ROLE_IDS.DISTRICT_STAFF, ROLE_IDS.BLOCK_STAFF]}><CRPTracking /></ProtectedRoute>}
+          path="/crp/create"
+          element={<ProtectedRoute allowedRoles={[ROLE_IDS.BLOCK_STAFF]}><CRPCreate /></ProtectedRoute>}
         />
         <Route
           path="/crp/:crpId/shg-members"
@@ -82,11 +85,7 @@ const AppRoutes: React.FC = () => {
         <Route path="/payment/payments" element={<Payments />} />
         <Route
           path="/reports"
-          element={<ProtectedRoute allowedRoles={[ROLE_IDS.STATE_ADMIN, ROLE_IDS.DISTRICT_STAFF]}><Reports /></ProtectedRoute>}
-        />
-        <Route
-          path="/settings"
-          element={<ProtectedRoute allowedRoles={[ROLE_IDS.STATE_ADMIN]}><Settings /></ProtectedRoute>}
+          element={<ProtectedRoute allowedRoles={[ROLE_IDS.STATE_ADMIN, ROLE_IDS.DISTRICT_STAFF, ROLE_IDS.BLOCK_STAFF]}><Reports /></ProtectedRoute>}
         />
       </Route>
       <Route path="*" element={<div>404 - Not Found</div>} />

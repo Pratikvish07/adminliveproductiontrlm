@@ -54,5 +54,7 @@ export interface User {
   blockId?: string;
   districtName?: string;
   blockName?: string;
+  designation?: string;
+  profileImage?: string;
 }
 

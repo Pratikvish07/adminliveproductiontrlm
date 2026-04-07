@@ -103,6 +103,11 @@ const Login: React.FC = () => {
         || getFirstValue(responseRoot, ['districtName', 'DistrictName']);
       const resolvedBlockName = getFirstValue(responseUser, ['blockName', 'BlockName'])
         || getFirstValue(responseRoot, ['blockName', 'BlockName']);
+      const resolvedEmail = getFirstValue(responseUser, ['email', 'Email', 'officialEmail', 'OfficialEmail'])
+        || getFirstValue(responseRoot, ['email', 'Email', 'officialEmail', 'OfficialEmail']);
+      const resolvedName = getFirstValue(responseUser, ['name', 'Name', 'officialName', 'OfficialName'])
+        || getFirstValue(responseRoot, ['name', 'Name', 'officialName', 'OfficialName'])
+        || livelihoodTrackerId;
       const normalizedDistrictId = isLikelyScopeId(resolvedDistrictId) ? resolvedDistrictId : '';
       const normalizedBlockId = isLikelyScopeId(resolvedBlockId) ? resolvedBlockId : '';
       const normalizedDistrictName =
@@ -114,8 +119,8 @@ const Login: React.FC = () => {
             id:    resolvedUserId,
             staffId: response.user.staffId ? String(response.user.staffId) : response.staffId ? String(response.staffId) : resolvedUserId,
             livelihoodTrackerId: response.user.livelihoodTrackerId ?? response.livelihoodTrackerId ?? livelihoodTrackerId,
-            email: response.user.email ?? '',
-            name:  response.user.name  ?? livelihoodTrackerId,
+            email: resolvedEmail,
+            name:  resolvedName,
             role,
             roleId,
             districtId: normalizedDistrictId,
@@ -127,8 +132,8 @@ const Login: React.FC = () => {
             id: resolvedUserId,
             staffId: response.staffId ? String(response.staffId) : response.id ? String(response.id) : '',
             livelihoodTrackerId,
-            email: '',
-            name: livelihoodTrackerId,
+            email: resolvedEmail,
+            name: resolvedName,
             role,
             roleId,
             districtId: normalizedDistrictId,

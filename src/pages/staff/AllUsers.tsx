@@ -8,6 +8,17 @@ import { useResolvedScope } from '../../utils/useResolvedScope';
 import './Staff.css';
 
 type StaffAnalyticsRecord = ReturnType<typeof toStaffRecords>[number];
+const USERS_PER_PAGE = 10;
+
+type UserEditForm = {
+  officialName: string;
+  officialEmail: string;
+  contactNumber: string;
+  designation: string;
+  districtName: string;
+  blockName: string;
+  livelihoodTrackerId: string;
+};
 
 const ROLE_COLORS: Record<string, string> = {
   STATE_ADMIN: '#0f4c81',
@@ -92,6 +103,34 @@ const formatCreatedDate = (value: unknown): string => {
   }).format(parsed);
 };
 
+const createEditForm = (record: StaffAnalyticsRecord): UserEditForm => ({
+  officialName: String(record.officialName ?? record.name ?? ''),
+  officialEmail: String(record.officialEmail ?? record.email ?? ''),
+  contactNumber: String(record.contactNumber ?? record.mobile ?? ''),
+  designation: String(record.designation ?? ''),
+  districtName: String(record.districtName ?? record.district ?? record.DistrictName ?? ''),
+  blockName: String(record.blockName ?? record.block ?? record.BlockName ?? ''),
+  livelihoodTrackerId: String(record.livelihoodTrackerId ?? ''),
+});
+
+const buildUpdatePayload = (record: StaffAnalyticsRecord, form: UserEditForm): Record<string, unknown> => ({
+  ...record,
+  staffId: record.staffId ?? record.id ?? record.userId ?? record.districtStaffId ?? record.blockStaffId,
+  id: record.id ?? record.staffId ?? record.userId ?? record.districtStaffId ?? record.blockStaffId,
+  officialName: form.officialName,
+  name: form.officialName,
+  officialEmail: form.officialEmail,
+  email: form.officialEmail,
+  contactNumber: form.contactNumber,
+  mobile: form.contactNumber,
+  designation: form.designation,
+  districtName: form.districtName,
+  district: form.districtName,
+  blockName: form.blockName,
+  block: form.blockName,
+  livelihoodTrackerId: form.livelihoodTrackerId,
+});
+
 const AllUsers: React.FC = () => {
   const { user } = useAuth();
   const { scopedUser } = useResolvedScope(user);
@@ -99,6 +138,11 @@ const AllUsers: React.FC = () => {
   const [records, setRecords] = React.useState<StaffAnalyticsRecord[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState('');
+  const [currentPage, setCurrentPage] = React.useState(1);
+  const [editingRecord, setEditingRecord] = React.useState<StaffAnalyticsRecord | null>(null);
+  const [editForm, setEditForm] = React.useState<UserEditForm | null>(null);
+  const [saveError, setSaveError] = React.useState('');
+  const [saving, setSaving] = React.useState(false);
 
   const loadUsers = React.useCallback(async () => {
     try {
@@ -178,7 +222,64 @@ const AllUsers: React.FC = () => {
   const approvedUsers = approvalBreakdown.find((item) => item.label === 'approved')?.count ?? 0;
   const pendingUsers = approvalBreakdown.find((item) => item.label === 'pending')?.count ?? 0;
   const rejectedUsers = approvalBreakdown.find((item) => item.label === 'rejected')?.count ?? 0;
-  const tablePreview = React.useMemo(() => records.slice(0, 8), [records]);
+  const totalPages = Math.max(1, Math.ceil(totalUsers / USERS_PER_PAGE));
+  const paginatedUsers = React.useMemo(() => {
+    const startIndex = (currentPage - 1) * USERS_PER_PAGE;
+    return records.slice(startIndex, startIndex + USERS_PER_PAGE);
+  }, [currentPage, records]);
+  const pageStart = totalUsers === 0 ? 0 : (currentPage - 1) * USERS_PER_PAGE + 1;
+  const pageEnd = Math.min(currentPage * USERS_PER_PAGE, totalUsers);
+
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [records]);
+
+  React.useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
+
+  const openEditModal = React.useCallback((record: StaffAnalyticsRecord) => {
+    setEditingRecord(record);
+    setEditForm(createEditForm(record));
+    setSaveError('');
+  }, []);
+
+  const closeEditModal = React.useCallback(() => {
+    setEditingRecord(null);
+    setEditForm(null);
+    setSaveError('');
+    setSaving(false);
+  }, []);
+
+  const handleEditFieldChange = React.useCallback((field: keyof UserEditForm, value: string) => {
+    setEditForm((prev) => (prev ? { ...prev, [field]: value } : prev));
+  }, []);
+
+  const handleSaveUser = React.useCallback(async () => {
+    if (!editingRecord || !editForm) {
+      return;
+    }
+
+    try {
+      setSaving(true);
+      setSaveError('');
+      const payload = buildUpdatePayload(editingRecord, editForm);
+      await staffService.updateUser(payload);
+
+      setRecords((prev) => prev.map((record) =>
+        (getStaffId(record) ?? '') === (getStaffId(editingRecord) ?? '')
+          ? { ...record, ...payload }
+          : record,
+      ));
+      closeEditModal();
+    } catch (err: any) {
+      setSaveError(err?.response?.data?.message ?? 'Unable to update this user right now.');
+    } finally {
+      setSaving(false);
+    }
+  }, [closeEditModal, editForm, editingRecord]);
 
   if (loading && records.length === 0) {
     return <Loader />;
@@ -310,53 +411,166 @@ const AllUsers: React.FC = () => {
         <article className="staff-panel staff-panel--wide">
           <div className="staff-panel-head">
             <div>
-              <h2>Quick user preview</h2>
-              <p>A small list preview, with the graphs kept as the main focus.</p>
+              <h2>All users list</h2>
+              <p>Browse the complete live dataset with pagination.</p>
             </div>
           </div>
 
-          {tablePreview.length === 0 ? (
+          {paginatedUsers.length === 0 ? (
             <div className="staff-empty">No users found.</div>
           ) : (
-            <div className="staff-mini-table">
-              <div className="staff-mini-table__head">
-                <span>Name</span>
-                <span>Role</span>
-                <span>Location</span>
-                <span>Joined</span>
-                <span>Status</span>
-              </div>
-              {tablePreview.map((record, index) => (
-                <div className="staff-mini-table__row" key={getStaffId(record) ?? index}>
-                  <div className="staff-mini-table__identity">
-                    <span className="staff-mini-table__avatar">{getInitials(getDisplayName(record))}</span>
-                    <span className="staff-mini-table__name-wrap">
-                      <strong>{getDisplayName(record)}</strong>
-                      <small>{getFieldValue(record, ['designation'])}</small>
-                    </span>
-                  </div>
-                  <span className="staff-mini-table__role-pill">{getStaffRoleLabel(record)}</span>
-                  <span className="staff-mini-table__location">
-                    <strong>{getFieldValue(record, ['districtName', 'district', 'DistrictName'])}</strong>
-                    <small>
-                      {getFieldValue(record, ['blockName', 'block', 'BlockName']) !== '-'
-                        ? getFieldValue(record, ['blockName', 'block', 'BlockName'])
-                        : 'District level'}
-                    </small>
-                  </span>
-                  <span className="staff-mini-table__joined">
-                    <strong>{formatCreatedDate(record.createdDate ?? record.CreatedDate)}</strong>
-                    <small>ID {getFieldValue(record, ['livelihoodTrackerId'])}</small>
-                  </span>
-                  <span className={`staff-mini-table__status staff-mini-table__status--${getApprovalBucket(record)}`}>
-                    {getApprovalBucket(record)}
-                  </span>
+            <>
+              <div className="staff-mini-table">
+                <div className="staff-mini-table__head">
+                  <span>Name</span>
+                  <span>Role</span>
+                  <span>Location</span>
+                  <span>Joined</span>
+                  <span>Status</span>
+                  <span>Action</span>
                 </div>
-              ))}
-            </div>
+                {paginatedUsers.map((record, index) => (
+                  <div className="staff-mini-table__row" key={getStaffId(record) ?? `${currentPage}-${index}`}>
+                    <div className="staff-mini-table__identity">
+                      <span className="staff-mini-table__avatar">{getInitials(getDisplayName(record))}</span>
+                      <span className="staff-mini-table__name-wrap">
+                        <strong>{getDisplayName(record)}</strong>
+                        <small>{getFieldValue(record, ['designation'])}</small>
+                      </span>
+                    </div>
+                    <span className="staff-mini-table__role-pill">{getStaffRoleLabel(record)}</span>
+                    <span className="staff-mini-table__location">
+                      <strong>{getFieldValue(record, ['districtName', 'district', 'DistrictName'])}</strong>
+                      <small>
+                        {getFieldValue(record, ['blockName', 'block', 'BlockName']) !== '-'
+                          ? getFieldValue(record, ['blockName', 'block', 'BlockName'])
+                          : 'District level'}
+                      </small>
+                    </span>
+                    <span className="staff-mini-table__joined">
+                      <strong>{formatCreatedDate(record.createdDate ?? record.CreatedDate)}</strong>
+                      <small>ID {getFieldValue(record, ['livelihoodTrackerId'])}</small>
+                    </span>
+                    <span className={`staff-mini-table__status staff-mini-table__status--${getApprovalBucket(record)}`}>
+                      {getApprovalBucket(record)}
+                    </span>
+                    <button
+                      type="button"
+                      className="staff-mini-table__edit-btn"
+                      onClick={() => openEditModal(record)}
+                    >
+                      Edit
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <div className="staff-pagination">
+                <p className="staff-pagination__summary">
+                  Showing {formatCount(pageStart)}-{formatCount(pageEnd)} of {formatCount(totalUsers)} users
+                </p>
+                <div className="staff-pagination__actions">
+                  <button
+                    type="button"
+                    className="staff-pagination__btn"
+                    onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                    disabled={currentPage === 1}
+                  >
+                    Previous
+                  </button>
+                  <span className="staff-pagination__page">
+                    Page {formatCount(currentPage)} of {formatCount(totalPages)}
+                  </span>
+                  <button
+                    type="button"
+                    className="staff-pagination__btn"
+                    onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+                    disabled={currentPage === totalPages}
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            </>
           )}
         </article>
       </section>
+
+      {editingRecord && editForm && (
+        <div className="staff-modal-backdrop" role="dialog" aria-modal="true" aria-label="Update user">
+          <div className="staff-modal">
+            <div className="staff-modal__head">
+              <div>
+                <p className="staff-kicker">Update User</p>
+                <h2>Edit {getDisplayName(editingRecord)}</h2>
+              </div>
+              <button type="button" className="staff-modal__close" onClick={closeEditModal}>Close</button>
+            </div>
+
+            <div className="staff-modal__grid">
+              <label className="staff-modal__field">
+                <span>Name</span>
+                <input
+                  value={editForm.officialName}
+                  onChange={(event) => handleEditFieldChange('officialName', event.target.value)}
+                />
+              </label>
+              <label className="staff-modal__field">
+                <span>Email</span>
+                <input
+                  value={editForm.officialEmail}
+                  onChange={(event) => handleEditFieldChange('officialEmail', event.target.value)}
+                />
+              </label>
+              <label className="staff-modal__field">
+                <span>Mobile</span>
+                <input
+                  value={editForm.contactNumber}
+                  onChange={(event) => handleEditFieldChange('contactNumber', event.target.value)}
+                />
+              </label>
+              <label className="staff-modal__field">
+                <span>Designation</span>
+                <input
+                  value={editForm.designation}
+                  onChange={(event) => handleEditFieldChange('designation', event.target.value)}
+                />
+              </label>
+              <label className="staff-modal__field">
+                <span>District</span>
+                <input
+                  value={editForm.districtName}
+                  onChange={(event) => handleEditFieldChange('districtName', event.target.value)}
+                />
+              </label>
+              <label className="staff-modal__field">
+                <span>Block</span>
+                <input
+                  value={editForm.blockName}
+                  onChange={(event) => handleEditFieldChange('blockName', event.target.value)}
+                />
+              </label>
+              <label className="staff-modal__field staff-modal__field--wide">
+                <span>Tracker ID</span>
+                <input
+                  value={editForm.livelihoodTrackerId}
+                  onChange={(event) => handleEditFieldChange('livelihoodTrackerId', event.target.value)}
+                />
+              </label>
+            </div>
+
+            {saveError && <div className="staff-alert staff-alert--analytics">{saveError}</div>}
+
+            <div className="staff-modal__actions">
+              <button type="button" className="staff-pagination__btn" onClick={closeEditModal} disabled={saving}>
+                Cancel
+              </button>
+              <button type="button" className="staff-pagination__btn" onClick={handleSaveUser} disabled={saving}>
+                {saving ? 'Saving...' : 'Save User'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

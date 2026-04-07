@@ -4,6 +4,21 @@ import { getWithFallback } from './requestFallback';
 export type CRPRecord = Record<string, unknown>;
 export type PendingCRPRecord = Record<string, unknown>;
 export type SHGMemberRecord = Record<string, unknown>;
+export type CreateCRPPayload = {
+  fullName: string;
+  aadhaarNo: string;
+  lokOSId: string;
+  villageId: number;
+  blockId: number;
+  contactNo: string;
+  emailId: string;
+  password: string;
+  crpTypeId: number;
+  shgId: number;
+  picturePath: string;
+  latitude: number;
+  longitude: number;
+};
 
 type SHGMembersByVillageResponse = {
   status?: boolean;
@@ -121,6 +136,11 @@ export const crpService = {
       `/SHGUpload/members-by-village/${villageId}`,
     );
     return Array.isArray(response.data?.data) ? response.data.data : [];
+  },
+
+  createCRP: async (payload: CreateCRPPayload) => {
+    const response = await api.post('/auth/crp/signup', payload);
+    return response.data;
   },
 
   approveCRP: async (crpId: string, approvedBy?: string) => {

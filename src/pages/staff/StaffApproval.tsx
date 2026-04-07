@@ -57,47 +57,22 @@ const StaffApproval: React.FC = () => {
     setLoading(true);
     setError('');
 
-    const [pendingRes, approvedRes, rejectedRes] = await Promise.allSettled([
+    const pendingRes = await Promise.allSettled([
       staffService.getPendingStaff(),
-      staffService.getApprovedStaff(),
-      staffService.getRejectedStaff(),
     ]);
 
-    const pending = pendingRes.status === 'fulfilled'
-      ? normalizeApprovalRecords(pendingRes.value).filter(isStaffApprovalRecord)
-      : [];
-    const approved = approvedRes.status === 'fulfilled'
-      ? normalizeApprovalRecords(approvedRes.value).filter(isStaffApprovalRecord)
-      : [];
-    const rejected = rejectedRes.status === 'fulfilled'
-      ? normalizeApprovalRecords(rejectedRes.value).filter(isStaffApprovalRecord)
+    const pendingResult = pendingRes[0];
+    const pending = pendingResult.status === 'fulfilled'
+      ? normalizeApprovalRecords(pendingResult.value).filter(isStaffApprovalRecord)
       : [];
 
-    const nextLists: StaffApprovalLists = {
+    setLists((prev) => ({
+      ...prev,
       pending,
-      approved,
-      rejected,
-    };
+    }));
 
-    setLists(nextLists);
-
-    if ([pendingRes, approvedRes, rejectedRes].every((result) => result.status === 'rejected')) {
+    if (pendingResult.status === 'rejected') {
       setError('Could not load staff data. Please refresh.');
-    } else {
-      const failedSections: string[] = [];
-      if (pendingRes.status === 'rejected') {
-        failedSections.push('pending');
-      }
-      if (approvedRes.status === 'rejected') {
-        failedSections.push('approved');
-      }
-      if (rejectedRes.status === 'rejected') {
-        failedSections.push('rejected');
-      }
-
-      if (failedSections.length > 0) {
-        setError(`Some staff lists could not be loaded: ${failedSections.join(', ')}.`);
-      }
     }
 
     setLoading(false);
@@ -123,11 +98,14 @@ const StaffApproval: React.FC = () => {
     try {
       await staffService.approveStaff(staffId);
       setLists((prev) => ({
-        ...prev,
         pending: prev.pending.filter((staff) => resolveStaffId(staff) !== staffId),
+        approved: [
+          ...prev.approved,
+          ...prev.pending.filter((staff) => resolveStaffId(staff) === staffId),
+        ],
+        rejected: prev.rejected,
       }));
       showToast('Staff record approved successfully.', true);
-      void loadAll();
     } catch (err: any) {
       console.error('Failed to approve staff', {
         staffId,
@@ -154,11 +132,14 @@ const StaffApproval: React.FC = () => {
     try {
       await staffService.rejectStaff(staffId);
       setLists((prev) => ({
-        ...prev,
         pending: prev.pending.filter((staff) => resolveStaffId(staff) !== staffId),
+        approved: prev.approved,
+        rejected: [
+          ...prev.rejected,
+          ...prev.pending.filter((staff) => resolveStaffId(staff) === staffId),
+        ],
       }));
       showToast('Staff record rejected successfully.', true);
-      void loadAll();
     } catch (err: any) {
       console.error('Failed to reject staff', {
         staffId,

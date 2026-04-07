@@ -12,6 +12,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   user: User | null;
   login: (user: User) => void;
+  updateUser: (updater: User | ((current: User | null) => User | null)) => void;
   logout: () => void;
 }
 
@@ -29,6 +30,22 @@ export const AuthProvider: React.FC<Props> = ({ children }) => {
     setUser(userData);
     setIsAuthenticated(true);
     setStoredUser(userData);
+  };
+
+  const updateUser = (updater: User | ((current: User | null) => User | null)) => {
+    setUser((current) => {
+      const nextUser = typeof updater === 'function'
+        ? updater(current)
+        : updater;
+
+      if (nextUser) {
+        setStoredUser(nextUser);
+      } else {
+        clearAuthStorage();
+      }
+
+      return nextUser;
+    });
   };
 
   const logout = () => {
@@ -49,7 +66,7 @@ export const AuthProvider: React.FC<Props> = ({ children }) => {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, user, login, logout }}>
+    <AuthContext.Provider value={{ isAuthenticated, user, login, updateUser, logout }}>
       {children}
     </AuthContext.Provider>
   );

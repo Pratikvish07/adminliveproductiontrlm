@@ -5,7 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import { crpService } from '../../services/crpService';
 import api from '../../services/api';
 import { getBlocks, getDistricts } from '../../services/masterService';
-import { filterByDistrictAndBlock } from '../../utils/roleAccess';
+import { getUserRoleId, ROLE_IDS } from '../../utils/roleAccess';
 import { useResolvedScope } from '../../utils/useResolvedScope';
 import { getCRPid, toCRPRecords, type CRPRecordProcessed } from './crpUtils';
 import './CRPList.css';
@@ -253,24 +253,38 @@ const enrichCRPRecords = async (
 const CRPList: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { scopedUser } = useResolvedScope(user);
+  const { districtId, blockId } = useResolvedScope(user);
   const hasLoadedRef = React.useRef(false);
   const [records, setRecords] = React.useState<CRPRecordProcessed[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState('');
+  const roleId = getUserRoleId(user);
 
   const loadCRPList = React.useCallback(async () => {
     try {
       setError('');
       setLoading(true);
 
-      const response = await crpService.getCRPList();
-      const scopedRecords = filterByDistrictAndBlock(
-        response as Record<string, unknown>[],
-        scopedUser,
-        ['districtId', 'district', 'districtName', 'DistrictId', 'District', 'DistrictName'],
-        ['blockId', 'block', 'blockName', 'BlockId', 'Block', 'BlockName'],
-      );
+      let scopedRecords: Record<string, unknown>[] = [];
+
+      if (roleId === ROLE_IDS.DISTRICT_STAFF) {
+        if (!districtId) {
+          setError('District scope is missing for this user.');
+          setRecords([]);
+          return;
+        }
+        scopedRecords = await crpService.getCRPByDistrict(districtId) as Record<string, unknown>[];
+      } else if (roleId === ROLE_IDS.BLOCK_STAFF) {
+        if (!blockId) {
+          setError('Block scope is missing for this user.');
+          setRecords([]);
+          return;
+        }
+        scopedRecords = await crpService.getCRPByBlock(blockId) as Record<string, unknown>[];
+      } else {
+        scopedRecords = await crpService.getCRPList() as Record<string, unknown>[];
+      }
+
       const processed = toCRPRecords(scopedRecords);
       const enriched  = await enrichCRPRecords(scopedRecords, processed);
 
@@ -281,7 +295,7 @@ const CRPList: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [scopedUser]);
+  }, [blockId, districtId, roleId]);
 
   React.useEffect(() => {
     if (hasLoadedRef.current) return;

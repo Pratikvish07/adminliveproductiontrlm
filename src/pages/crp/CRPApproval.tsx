@@ -70,6 +70,11 @@ const CRPApproval: React.FC = () => {
         : isLikelyScopeId(user?.districtId)
           ? String(user?.districtId)
           : '';
+      const resolvedBlockId = isLikelyScopeId(scopedUser?.blockId)
+        ? String(scopedUser?.blockId)
+        : isLikelyScopeId(user?.blockId)
+          ? String(user?.blockId)
+          : '';
 
       if (roleId === ROLE_IDS.DISTRICT_STAFF) {
         if (!resolvedDistrictId) {
@@ -79,7 +84,12 @@ const CRPApproval: React.FC = () => {
         }
         response = await crpService.getCRPByDistrict(resolvedDistrictId);
       } else if (roleId === ROLE_IDS.BLOCK_STAFF) {
-        response = await crpService.getCRPList();
+        if (!resolvedBlockId) {
+          setError('Block scope is missing for this user.');
+          setRecords([]);
+          return;
+        }
+        response = await crpService.getCRPByBlock(resolvedBlockId);
       } else {
         response = await crpService.getCRPList();
       }
