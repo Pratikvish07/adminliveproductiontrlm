@@ -174,19 +174,6 @@ const Login: React.FC = () => {
         {/* ══ LEFT — visual / branding panel ══════════════════════ */}
         <div className="login-visual">
 
-          {/* Top: tag + headline + sub-copy */}
-          <div className="visual-info-card">
-            <p className="visual-tag">TRLM Operations Console</p>
-            <h2 className="visual-title">
-              Access district, staff,{' '}
-              <em>CRP</em> &amp; payment workflows
-            </h2>
-            <p className="visual-sub">
-              A secure, unified platform for Tripura Rural Livelihood Mission
-              field coordinators and district administrators.
-            </p>
-          </div>
-
           {/* Middle: logo badge */}
           <div className="visual-badge">
             <img

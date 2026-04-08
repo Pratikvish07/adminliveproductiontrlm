@@ -133,60 +133,8 @@
 }
 
 /* ── .visual-info-card  — tag + headline block ── */
-.visual-info-card {
-  position: relative;
-  z-index: 1;
-  max-width: 340px;
-  padding: 24px 24px 22px;
-  border-radius: 22px;
-  background: linear-gradient(180deg, rgba(10, 25, 45, 0.72) 0%, rgba(14, 33, 58, 0.52) 100%);
-  border: 1px solid rgba(212, 175, 55, 0.16);
-  box-shadow: 0 22px 50px rgba(0, 0, 0, 0.22);
-  backdrop-filter: blur(8px);
-}
-
 /* ── .visual-tag  — "TRLM Operations Console" small-caps label ── */
-.visual-tag {
-  font-size: 10.5px;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--gold);
-  font-weight: 500;
-  margin: 0 0 14px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.visual-tag::before {
-  content: '';
-  display: block;
-  width: 18px;
-  height: 1px;
-  background: var(--gold);
-  opacity: 0.65;
-  flex-shrink: 0;
-}
-
 /* ── .visual-title  — main headline ── */
-.visual-title {
-  font-family: 'Playfair Display', serif;
-  font-size: clamp(22px, 2.8vw, 32px);
-  color: #f0ede6;
-  line-height: 1.12;
-  letter-spacing: -0.02em;
-  margin: 0;
-  font-weight: 700;
-}
-
-.visual-sub {
-  margin-top: 16px;
-  color: rgba(225, 234, 243, 0.86);
-  font-size: 16px;
-  line-height: 1.6;
-  max-width: 32ch;
-}
-
 /* ── .visual-badge  — logo pill at the bottom of left panel ── */
 .visual-badge {
   position: relative;
@@ -195,6 +143,7 @@
   align-items: center;
   justify-content: flex-start;
   width: fit-content;
+  margin-inline: auto;
   gap: 14px;
   padding: 12px 18px 12px 12px;
   border-radius: 999px;
@@ -630,7 +579,4 @@
     padding: 22px 18px;
   }
 
-  .visual-title {
-    font-size: 20px;
-  }
 }
