@@ -24,6 +24,7 @@ const Navbar: React.FC = () => {
       { match: '/payment/loan-tracking', title: 'Loan Tracking', subtitle: 'Monitor disbursement and repayment flow.' },
       { match: '/payment/loan-approval', title: 'Loan Approval', subtitle: 'Review loan approvals waiting for action.' },
       { match: '/payment/payments', title: 'Payments', subtitle: 'Check payment records and status updates.' },
+      { match: '/analytics', title: 'Analytics', subtitle: 'Graph view for static livelihood performance insights.' },
       { match: '/reports', title: 'Reports', subtitle: 'Review Excel-style SHG member farm activity report data.' },
       { match: '/master/gram-panchayat', title: 'Gram Panchayats', subtitle: 'View gram panchayat master records.' },
       { match: '/master/village', title: 'Villages', subtitle: 'Navigate village-level master data.' },

@@ -1,7 +1,7 @@
 import React from 'react';
 import Loader from '../../components/common/Loader';
 import { staffService } from '../../services/staffService';
-import { getStaffRoleLabel, resolveStaffId, toStaffRecords } from './staffUtils';
+import { getApprovalBucket, getStaffRoleLabel, resolveStaffId, toStaffRecords } from './staffUtils';
 import type { PendingStaffRecord } from '../../types/common.types';
 import { isStaffApprovalRoleId } from '../../utils/roleAccess';
 import './StaffApproval.css';
@@ -33,6 +33,47 @@ const isStaffApprovalRecord = (staff: PendingStaffRecord): boolean =>
 const normalizeApprovalRecords = (value: unknown): PendingStaffRecord[] =>
   toStaffRecords(value).map((record) => record as PendingStaffRecord);
 
+const getStaffApprovalRecords = (records: PendingStaffRecord[]): PendingStaffRecord[] => {
+  const staffRoleRecords = records.filter(isStaffApprovalRecord);
+  return staffRoleRecords.length > 0 ? staffRoleRecords : records;
+};
+
+const dedupeStaffRecords = (records: PendingStaffRecord[]): PendingStaffRecord[] => {
+  const seen = new Set<string>();
+
+  return records.filter((record) => {
+    const id = resolveStaffId(record);
+    const key = id ? `id:${id}` : JSON.stringify(record);
+    if (seen.has(key)) {
+      return false;
+    }
+
+    seen.add(key);
+    return true;
+  });
+};
+
+const bucketAllUsers = (records: PendingStaffRecord[]): StaffApprovalLists => {
+  const buckets: StaffApprovalLists = {
+    pending: [],
+    approved: [],
+    rejected: [],
+  };
+
+  for (const record of getStaffApprovalRecords(records)) {
+    const bucket = getApprovalBucket(record);
+    if (bucket === 'pending' || bucket === 'approved' || bucket === 'rejected') {
+      buckets[bucket].push(record);
+    }
+  }
+
+  return {
+    pending: dedupeStaffRecords(buckets.pending),
+    approved: dedupeStaffRecords(buckets.approved),
+    rejected: dedupeStaffRecords(buckets.rejected),
+  };
+};
+
 const StaffApproval: React.FC = () => {
   const hasLoadedRef = React.useRef(false);
   const [activeTab, setActiveTab] = React.useState<TabKey>('pending');
@@ -57,21 +98,44 @@ const StaffApproval: React.FC = () => {
     setLoading(true);
     setError('');
 
-    const pendingRes = await Promise.allSettled([
+    const [pendingResult, approvedResult, rejectedResult, allUsersResult] = await Promise.allSettled([
       staffService.getPendingStaff(),
+      staffService.getApprovedStaff(),
+      staffService.getRejectedStaff(),
+      staffService.getAllUsers(),
     ]);
 
-    const pendingResult = pendingRes[0];
-    const pending = pendingResult.status === 'fulfilled'
-      ? normalizeApprovalRecords(pendingResult.value).filter(isStaffApprovalRecord)
-      : [];
+    const endpointLists: StaffApprovalLists = {
+      pending: pendingResult.status === 'fulfilled'
+        ? dedupeStaffRecords(getStaffApprovalRecords(normalizeApprovalRecords(pendingResult.value)))
+        : [],
+      approved: approvedResult.status === 'fulfilled'
+        ? dedupeStaffRecords(getStaffApprovalRecords(normalizeApprovalRecords(approvedResult.value)))
+        : [],
+      rejected: rejectedResult.status === 'fulfilled'
+        ? dedupeStaffRecords(getStaffApprovalRecords(normalizeApprovalRecords(rejectedResult.value)))
+        : [],
+    };
 
-    setLists((prev) => ({
-      ...prev,
-      pending,
-    }));
+    const allUserBuckets = allUsersResult.status === 'fulfilled'
+      ? bucketAllUsers(normalizeApprovalRecords(allUsersResult.value))
+      : {
+          pending: [],
+          approved: [],
+          rejected: [],
+        };
 
-    if (pendingResult.status === 'rejected') {
+    const nextLists: StaffApprovalLists = {
+      pending: endpointLists.pending.length > 0 ? endpointLists.pending : allUserBuckets.pending,
+      approved: endpointLists.approved.length > 0 ? endpointLists.approved : allUserBuckets.approved,
+      rejected: endpointLists.rejected.length > 0 ? endpointLists.rejected : allUserBuckets.rejected,
+    };
+
+    setLists(nextLists);
+
+    const allRequestsFailed = [pendingResult, approvedResult, rejectedResult, allUsersResult]
+      .every((result) => result.status === 'rejected');
+    if (allRequestsFailed) {
       setError('Could not load staff data. Please refresh.');
     }
 

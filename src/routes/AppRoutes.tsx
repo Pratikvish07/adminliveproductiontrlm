@@ -20,6 +20,7 @@ import LoanTracking from '../pages/payment/LoanTracking';
 import LoanApproval from '../pages/payment/LoanApproval';
 import Payments from '../pages/payment/Payments';
 import Reports from '../pages/reports/Reports';
+import Analytics from '../pages/analytics/Analytics';
 import { ROLE_IDS } from '../utils/roleAccess';
 
 const AppRoutes: React.FC = () => {
@@ -86,6 +87,10 @@ const AppRoutes: React.FC = () => {
         <Route
           path="/reports"
           element={<ProtectedRoute allowedRoles={[ROLE_IDS.STATE_ADMIN, ROLE_IDS.DISTRICT_STAFF, ROLE_IDS.BLOCK_STAFF]}><Reports /></ProtectedRoute>}
+        />
+        <Route
+          path="/analytics"
+          element={<ProtectedRoute allowedRoles={[ROLE_IDS.STATE_ADMIN]}><Analytics /></ProtectedRoute>}
         />
       </Route>
       <Route path="*" element={<div>404 - Not Found</div>} />

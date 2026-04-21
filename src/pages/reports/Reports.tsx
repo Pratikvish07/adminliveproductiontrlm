@@ -314,6 +314,94 @@ const reportRows: ReportRecord[] = [
   },
 ];
 
+type ReportSectionKey = 'shg' | 'producerGroup' | 'nonProducerGroup' | 'lhCbo' | 'fpc' | 'chc';
+
+type ReportSection = {
+  key: ReportSectionKey;
+  label: string;
+  csvName: string;
+  rows: ReportRecord[];
+};
+
+const buildStaticSectionRows = (
+  reportPrefix: string,
+  codePrefix: string,
+  sectionNames: string[],
+  activities: string[],
+): ReportRecord[] =>
+  reportRows.map((row, index) => ({
+    ...row,
+    reportId: `${reportPrefix}-${String(index + 1).padStart(4, '0')}`,
+    shgName: sectionNames[index % sectionNames.length],
+    shgCode: `${codePrefix}-${row.district.slice(0, 3).toUpperCase()}-${String(index + 1).padStart(2, '0')}`,
+    memberName: row.memberName,
+    activityName: activities[index % activities.length],
+  }));
+
+const reportSections: ReportSection[] = [
+  {
+    key: 'shg',
+    label: 'SHG',
+    csvName: 'trlm-shg-farm-activity-report.csv',
+    rows: reportRows,
+  },
+  {
+    key: 'producerGroup',
+    label: 'Producer Group',
+    csvName: 'trlm-producer-group-report.csv',
+    rows: buildStaticSectionRows(
+      'PG-RPT',
+      'PG',
+      ['Matabari Paddy Producer Group', 'Ambassa Vegetable Producer Group', 'Dasda Maize Producer Group'],
+      ['Paddy Aggregation', 'Vegetable Cluster Farming', 'Maize Value Chain'],
+    ),
+  },
+  {
+    key: 'nonProducerGroup',
+    label: 'Non Producer Group',
+    csvName: 'trlm-non-producer-group-report.csv',
+    rows: buildStaticSectionRows(
+      'NPG-RPT',
+      'NPG',
+      ['Udaipur Skill Group', 'Kulai Service Group', 'Karbook Enterprise Group'],
+      ['Tailoring Enterprise', 'Food Processing Unit', 'Retail Support Activity'],
+    ),
+  },
+  {
+    key: 'lhCbo',
+    label: 'Integrated Farming Cluster (IFC)',
+    csvName: 'trlm-integrated-farming-cluster-ifc-report.csv',
+    rows: buildStaticSectionRows(
+      'IFC-RPT',
+      'IFC',
+      ['Gomati Integrated Farming Cluster', 'Dhalai Integrated Farming Cluster', 'West Tripura Integrated Farming Cluster'],
+      ['Livelihood Planning', 'Enterprise Monitoring', 'Community Resource Support'],
+    ),
+  },
+  {
+    key: 'fpc',
+    label: 'FPC',
+    csvName: 'trlm-fpc-report.csv',
+    rows: buildStaticSectionRows(
+      'FPC-RPT',
+      'FPC',
+      ['Tripura Agro FPC', 'Gomati Farmers FPC', 'Khowai Growers FPC'],
+      ['Market Linkage', 'Input Supply', 'Collective Procurement'],
+    ),
+  },
+  {
+    key: 'chc',
+    label: 'CHC',
+    csvName: 'trlm-chc-report.csv',
+    rows: buildStaticSectionRows(
+      'CHC-RPT',
+      'CHC',
+      ['Matabari Custom Hiring Centre', 'Ambassa CHC', 'Kumarghat CHC'],
+      ['Farm Equipment Rental', 'Power Tiller Service', 'Irrigation Pump Service'],
+    ),
+  },
+];
+
 const columnLabels: Record<keyof ReportRecord, string> = {
   reportId: 'Report ID',
   crpId: 'CRP ID',
@@ -447,9 +535,9 @@ const buildVideoPreview = (record: ReportRecord) =>
     </svg>
   `);
 
-const exportCSV = () => {
+const exportCSV = (rowsToExport: ReportRecord[], fileName: string) => {
   const headers = orderedColumns.map((column) => columnLabels[column]);
-  const rows = reportRows.map((record) =>
+  const rows = rowsToExport.map((record) =>
     orderedColumns.map((column) => formatCellValue(column, record[column])),
   );
 
@@ -461,35 +549,38 @@ const exportCSV = () => {
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement('a');
   anchor.href = url;
-  anchor.download = 'trlm-shg-farm-activity-report.csv';
+  anchor.download = fileName;
   anchor.click();
   URL.revokeObjectURL(url);
 };
 
 const Reports: React.FC = () => {
   const [preview, setPreview] = React.useState<PreviewState>(null);
-  const completedCount = reportRows.filter((row) => row.progressStatus === 'Completed').length;
-  const geoTaggedCount = reportRows.filter((row) => row.geoTagged).length;
+  const [activeSectionKey, setActiveSectionKey] = React.useState<ReportSectionKey>('shg');
+  const activeSection = reportSections.find((section) => section.key === activeSectionKey) ?? reportSections[0];
+  const activeRows = activeSection.rows;
+  const completedCount = activeRows.filter((row) => row.progressStatus === 'Completed').length;
+  const geoTaggedCount = activeRows.filter((row) => row.geoTagged).length;
 
   return (
     <PageShell
       kicker="Reports"
-      title="SHG Member Farm-based Activity Status"
-      subtitle="Excel-style admin report with 10 static demo records and CSV download."
+      title={`${activeSection.label} Farm-based Activity Status`}
+      subtitle="Excel-style admin report sections with static demo records and CSV download."
     >
       <section className="excel-report-hero page-card">
         <div>
           <span className="excel-report-hero__kicker">Workbook Preview</span>
-          <h2>Farm Activity Register</h2>
+          <h2>{activeSection.label} Activity Register</h2>
           <p>
-            Spreadsheet-style report view for admin review. You can scroll horizontally, inspect all 10 records,
-            and download the same data as CSV.
+            Spreadsheet-style report view for admin review. Select a report section, scroll horizontally,
+            inspect the static records, and download the same data as CSV.
           </p>
         </div>
         <div className="excel-report-hero__stats">
           <div>
             <span>Total Records</span>
-            <strong>{reportRows.length}</strong>
+            <strong>{activeRows.length}</strong>
           </div>
           <div>
             <span>Completed</span>
@@ -501,7 +592,11 @@ const Reports: React.FC = () => {
           </div>
         </div>
         <div className="excel-report-hero__actions">
-          <button className="excel-report-btn excel-report-btn--primary" type="button" onClick={exportCSV}>
+          <button
+            className="excel-report-btn excel-report-btn--primary"
+            type="button"
+            onClick={() => exportCSV(activeRows, activeSection.csvName)}
+          >
             Download CSV
           </button>
         </div>
@@ -510,11 +605,18 @@ const Reports: React.FC = () => {
       <section className="page-card excel-sheet-card">
         <div className="excel-sheet-card__bar">
           <div className="excel-sheet-card__tabs">
-            <span className="is-active">Farm Activity Status</span>
-            <span>Income Review</span>
-            <span>Tracking Log</span>
+            {reportSections.map((section) => (
+              <button
+                key={section.key}
+                className={section.key === activeSectionKey ? 'is-active' : undefined}
+                type="button"
+                onClick={() => setActiveSectionKey(section.key)}
+              >
+                {section.label}
+              </button>
+            ))}
           </div>
-          <div className="excel-sheet-card__meta">Ready to download</div>
+          <div className="excel-sheet-card__meta">{activeSection.label} ready to download</div>
         </div>
 
         <div className="excel-sheet-wrap">
@@ -534,7 +636,7 @@ const Reports: React.FC = () => {
               </tr>
             </thead>
             <tbody>
-              {reportRows.map((record, rowIndex) => (
+              {activeRows.map((record, rowIndex) => (
                 <tr key={record.reportId}>
                   <td className="excel-sheet__row-index">{rowIndex + 2}</td>
                   {orderedColumns.map((column) => (

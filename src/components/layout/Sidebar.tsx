@@ -8,6 +8,7 @@ import {
   LogOut,
   Map,
   ShieldCheck,
+  TrendingUp,
   Users,
 } from 'lucide-react';
 import { useSidebar } from '../../context/SidebarContext';
@@ -50,6 +51,7 @@ const Sidebar: React.FC = () => {
             { path: '/staff/users', label: 'All Users', icon: Users },
             { path: '/staff/create-user', label: 'Create User', icon: Users },
             ...CRP_NAV_ITEMS.admin,
+            { path: '/analytics', label: 'Analytics', icon: TrendingUp },
             { path: '/reports', label: 'Reports', icon: BarChart3 },
           ],
         },

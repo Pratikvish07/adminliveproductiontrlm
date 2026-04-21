@@ -110,6 +110,7 @@
   flex-wrap: wrap;
 }
 
+.excel-sheet-card__tabs button,
 .excel-sheet-card__tabs span {
   padding: 0.42rem 0.8rem;
   border: 1px solid #cfd9e3;
@@ -118,8 +119,19 @@
   color: #62798c;
   font-size: 0.8rem;
   font-weight: 700;
+  font-family: inherit;
 }
 
+.excel-sheet-card__tabs button {
+  cursor: pointer;
+}
+
+.excel-sheet-card__tabs button:hover {
+  border-color: #a9c7dc;
+  background: #f4f9fd;
+}
+
+.excel-sheet-card__tabs button.is-active,
 .excel-sheet-card__tabs span.is-active {
   border-color: #8eb6d2;
   background: #dcebf7;
