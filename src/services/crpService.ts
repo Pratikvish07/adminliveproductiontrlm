@@ -40,26 +40,51 @@ const isBadRequestError = (error: unknown): boolean => {
     : false;
 };
 
-const postCRPDecision = async (path: string, approvedBy?: string) => {
-  const approverId = toOptionalInt(approvedBy);
+const isNotFoundError = (error: unknown): boolean => {
+  return typeof error === 'object' && error !== null && 'response' in error
+    ? (error as { response?: { status?: number } }).response?.status === 404
+    : false;
+};
 
-  try {
-    const response = await api.post(
-      path,
-      null,
-      approverId === undefined
-        ? undefined
-        : { params: { approvedBy: approverId } },
-    );
-    return response.data;
-  } catch (error) {
-    // If it failed with 400 and we had an approver param, retry without it
-    if (!isBadRequestError(error) || approverId === undefined) {
-      throw error;
+const postCRPDecision = async (paths: string[], approvedBy?: string) => {
+  const approverId = toOptionalInt(approvedBy);
+  const normalizedPaths = Array.from(new Set(paths));
+  let lastError: unknown = null;
+
+  const requestVariants = approverId === undefined
+    ? [
+        { data: null, config: undefined },
+      ]
+    : [
+        { data: null, config: { params: { approvedBy: approverId } } },
+        { data: { approvedBy: approverId }, config: undefined },
+        { data: null, config: undefined },
+      ];
+
+  for (const path of normalizedPaths) {
+    for (const variant of requestVariants) {
+      try {
+        const response = await api.post(path, variant.data, variant.config);
+        return response.data;
+      } catch (error) {
+        lastError = error;
+
+        // Retry the same path with a different request shape when the server rejects the payload.
+        if (isBadRequestError(error)) {
+          continue;
+        }
+
+        // Try the next path when the backend exposes a different CRP approval route.
+        if (isNotFoundError(error)) {
+          break;
+        }
+
+        throw error;
+      }
     }
-    const fallbackResponse = await api.post(path);
-    return fallbackResponse.data;
   }
+
+  throw lastError;
 };
 
 export const crpService = {
@@ -144,10 +169,16 @@ export const crpService = {
   },
 
   approveCRP: async (crpId: string, approvedBy?: string) => {
-    return postCRPDecision(`/auth/crp/approve/${crpId}`, approvedBy);
+    return postCRPDecision([
+      `/auth/crp/approve/${crpId}`,
+      `/crp/approve/${crpId}`,
+    ], approvedBy);
   },
 
   rejectCRP: async (crpId: string, approvedBy?: string) => {
-    return postCRPDecision(`/auth/crp/reject/${crpId}`, approvedBy);
+    return postCRPDecision([
+      `/auth/crp/reject/${crpId}`,
+      `/crp/reject/${crpId}`,
+    ], approvedBy);
   },
 };

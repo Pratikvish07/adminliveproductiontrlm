@@ -245,7 +245,13 @@ export function toCRPRecords(records: CRPRecord[] | PendingCRPRecord[]): CRPReco
 }
 
 export function getCRPid(record: CRPRecordProcessed): string {
-  return String((record as any).crpRegistrationId || (record as any).id || '');
+  return String(
+    (record as any).crpRegistrationId ||
+    (record as any).crpId ||
+    (record as any).CRPId ||
+    (record as any).id ||
+    '',
+  );
 }
 
 export function formatCRPValue(value: any): string {

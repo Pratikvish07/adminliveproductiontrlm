@@ -1,7 +1,7 @@
 // Auth related types
 
 export interface LoginRequest {
-  email?: string;
+  
   livelihoodTrackerId?: string;
   password: string;
 }

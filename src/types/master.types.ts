@@ -29,3 +29,14 @@ export interface SignupBlockOption {
   blockId: number | string;
   blockName: string;
 }
+
+export interface SubCategory {
+  SubCategoryId: number;
+  ActivityId: number;
+  SubCategoryName: string;
+}
+
+export interface LivelihoodActivity {
+  ActivityId: number;
+  ActivityName: string;
+}

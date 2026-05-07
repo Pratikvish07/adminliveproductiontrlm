@@ -7,6 +7,9 @@ import Signup from '../pages/auth/Signup';
 import Dashboard from '../pages/dashboard/Dashboard';
 import Village from '../pages/master/Village';
 import GramPanchayat from '../pages/master/GramPanchayat';
+import SubCategory from '../pages/master/SubCategory';
+import RolePage from '../pages/master/Role';
+import ActivityPage from '../pages/master/Activity';
 // Staff
 import AllUsers from '../pages/staff/AllUsers';
 import StaffApproval from '../pages/staff/StaffApproval';
@@ -45,6 +48,18 @@ const AppRoutes: React.FC = () => {
         <Route
           path="/master/gram-panchayat"
           element={<ProtectedRoute allowedRoles={[ROLE_IDS.STATE_ADMIN, ROLE_IDS.DISTRICT_STAFF, ROLE_IDS.BLOCK_STAFF]}><GramPanchayat /></ProtectedRoute>}
+        />
+        <Route
+          path="/master/sub-category"
+          element={<ProtectedRoute><SubCategory /></ProtectedRoute>}
+        />
+        <Route
+          path="/master/roles"
+          element={<ProtectedRoute allowedRoles={[ROLE_IDS.STATE_ADMIN]}><RolePage /></ProtectedRoute>}
+        />
+        <Route
+          path="/master/activities"
+          element={<ProtectedRoute allowedRoles={[ROLE_IDS.STATE_ADMIN]}><ActivityPage /></ProtectedRoute>}
         />
         {/* Staff */}
         <Route

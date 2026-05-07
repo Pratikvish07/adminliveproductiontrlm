@@ -6,7 +6,7 @@ import { authService } from '../../services/authService';
 import { useAuth } from '../../context/AuthContext';
 import heroImage from '../../assets/hero.png';
 import { isLikelyScopeId } from '../../utils/helpers';
-import { normalizeRoleId } from '../../utils/roleAccess';
+import { normalizeRoleId, fetchRoles } from '../../utils/roleAccess';
 import { setStoredRole, setStoredToken } from '../../utils/authStorage';
 import './Login.css';
 
@@ -85,9 +85,17 @@ const Login: React.FC = () => {
         throw new Error('Login succeeded, but no access token was returned by the server.');
       }
 
-      const resolvedRole = normalizeRoleId(response.role ?? response.user?.role ?? response.roleId ?? response.user?.roleId);
+      // Prefer numeric roleId directly from API response (most reliable)
+      const rawRoleId =
+        response?.user?.roleId ?? response?.user?.RoleId ??
+        response?.roleId ?? response?.RoleId ??
+        response?.user?.role ?? response?.role;
+      const resolvedRole = normalizeRoleId(rawRoleId);
       const roleId = resolvedRole;
       const role = resolvedRole;
+
+      // Hydrate role cache for names/labels
+      fetchRoles().catch(console.error);
       const resolvedUserId = resolveUserId(response, livelihoodTrackerId);
       const responseUser = response?.user && typeof response.user === 'object'
         ? response.user as Record<string, unknown>

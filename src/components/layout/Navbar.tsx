@@ -28,6 +28,9 @@ const Navbar: React.FC = () => {
       { match: '/reports', title: 'Reports', subtitle: 'Review Excel-style SHG member farm activity report data.' },
       { match: '/master/gram-panchayat', title: 'Gram Panchayats', subtitle: 'View gram panchayat master records.' },
       { match: '/master/village', title: 'Villages', subtitle: 'Navigate village-level master data.' },
+      { match: '/master/sub-category', title: 'Sub Categories', subtitle: 'Manage livelihood sub-categories by activity type.' },
+      { match: '/master/roles', title: 'Roles', subtitle: 'Manage application user roles and access levels.' },
+      { match: '/master/activities', title: 'Activities', subtitle: 'Manage primary livelihood activity types.' },
     ];
 
     return routes.find((route) => location.pathname.startsWith(route.match)) ?? {

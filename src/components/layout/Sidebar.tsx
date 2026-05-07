@@ -1,4 +1,4 @@
-import React from 'react';
+import React from 'react'; // Sidebar with role-based navigation
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
   BarChart3,
@@ -8,12 +8,14 @@ import {
   LogOut,
   Map,
   ShieldCheck,
+  Tags,
+  Activity,
   TrendingUp,
   Users,
 } from 'lucide-react';
 import { useSidebar } from '../../context/SidebarContext';
 import { useAuth } from '../../context/AuthContext';
-import { getRoleLabel, isBlockStaff, isDistrictStaff, isStateAdmin } from '../../utils/roleAccess';
+import { getRoleLabel, getUserRoleId, isBlockStaff, isDistrictStaff, isStateAdmin } from '../../utils/roleAccess';
 
 const CRP_NAV_ITEMS = {
   admin: [
@@ -53,6 +55,14 @@ const Sidebar: React.FC = () => {
             ...CRP_NAV_ITEMS.admin,
             { path: '/analytics', label: 'Analytics', icon: TrendingUp },
             { path: '/reports', label: 'Reports', icon: BarChart3 },
+          ],
+        },
+        {
+          label: 'Master Data',
+          items: [
+            { path: '/master/sub-category', label: 'Sub Categories', icon: Tags },
+            { path: '/master/roles', label: 'Roles', icon: ShieldCheck },
+            { path: '/master/activities', label: 'Activities', icon: Activity },
           ],
         },
       ];
@@ -107,7 +117,7 @@ const Sidebar: React.FC = () => {
     ];
   }, [user]);
 
-  const roleLabel = getRoleLabel(user?.roleId || user?.role || '');
+  const roleLabel = getRoleLabel(getUserRoleId(user));
 
   return (
     <aside className={`gov-sidebar${isMobileOpen ? ' is-mobile-open' : ''}`}>
@@ -136,7 +146,7 @@ const Sidebar: React.FC = () => {
 
       <div className="gov-sidebar__profile">
         <div className="gov-sidebar__profile-avatar">
-          {isStateAdmin(user) ? 'SA' : isDistrictStaff(user) ? 'DS' : 'BS'}
+          {isStateAdmin(user) ? 'SA' : isDistrictStaff(user) ? 'DS' : isBlockStaff(user) ? 'BS' : 'U'}
         </div>
         {!isCollapsed && (
           <div className="gov-sidebar__profile-copy">

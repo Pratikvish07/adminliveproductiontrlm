@@ -1,5 +1,5 @@
 import api from './api';
-import type { District, Block, Role, Village, GramPanchayat } from '../types/master.types';
+import type { District, Block, Role, Village, GramPanchayat, SubCategory, LivelihoodActivity } from '../types/master.types';
 import { getWithFallback } from './requestFallback';
 
 export type SignupBlockOption = {
@@ -143,6 +143,117 @@ export const getDashboardCounts = async (): Promise<DashboardCount[]> => {
   return Array.isArray(response) ? response as DashboardCount[] : [];
 };
 
+// ── Role CRUD ─────────────────────────────────────────────────────────────
+
+export const getRoleById = async (id: number): Promise<Role> => {
+  const response = await api.get(`/Role/${id}`);
+  return response.data;
+};
+
+export const createRole = async (data: {
+  roleName: string;
+}): Promise<Role> => {
+  // POST /Role — JSON body: { roleId: 0, roleName: "string", createdDate: "..." }
+  const response = await api.post('/Role', {
+    roleId: 0,
+    roleName: data.roleName,
+    createdDate: new Date().toISOString(),
+  });
+  return response.data;
+};
+
+export const updateRole = async (id: number, data: {
+  roleName: string;
+}): Promise<void> => {
+  // Try query params first as it's common in this backend
+  await api.put('/Role', null, {
+    params: { roleId: id, roleName: data.roleName },
+  });
+};
+
+export const deleteRole = async (id: number): Promise<void> => {
+  // Try both casing if one fails, but starting with PascalCase
+  await api.delete('/Role', {
+    params: { roleId: id },
+  });
+};
+
+export const getSubCategories = async (): Promise<SubCategory[]> => {
+  // Try PascalCase for consistency with Role
+  const response = await api.get('/SubCategory');
+  const raw = Array.isArray(response.data) ? response.data : (response.data?.data ?? []);
+  
+  // Robust mapping for field variations
+  return raw.map((item: any) => ({
+    SubCategoryId: Number(item.SubCategoryId ?? item.subCategoryId ?? item.id ?? 0),
+    ActivityId: Number(item.ActivityId ?? item.activityId ?? item.IdActivity ?? 0),
+    SubCategoryName: String(item.SubCategoryName ?? item.subCategoryName ?? item.name ?? ''),
+  }));
+};
+
+export const createSubCategory = async (data: {
+  ActivityId: number;
+  SubCategoryName: string;
+}): Promise<SubCategory> => {
+  // POST /SubCategory?ActivityId=...&SubCategoryName=...
+  const response = await api.post('/SubCategory', null, {
+    params: { ActivityId: data.ActivityId, SubCategoryName: data.SubCategoryName },
+  });
+  return response.data;
+};
+
+export const updateSubCategory = async (data: {
+  SubCategoryId: number;
+  ActivityId: number;
+  SubCategoryName: string;
+}): Promise<void> => {
+  await api.put('/SubCategory', null, {
+    params: {
+      SubCategoryId: data.SubCategoryId,
+      ActivityId: data.ActivityId,
+      SubCategoryName: data.SubCategoryName,
+    },
+  });
+};
+
+export const deleteSubCategory = async (subCategoryId: number): Promise<void> => {
+  await api.delete('/SubCategory', { params: { SubCategoryId: subCategoryId } });
+};
+
+// ── LivelihoodActivity CRUD ───────────────────────────────────────────────
+
+export const getActivities = async (): Promise<LivelihoodActivity[]> => {
+  const response = await api.get('/activity');
+  const raw = Array.isArray(response.data) ? response.data : (response.data?.data ?? []);
+  
+  return raw.map((item: any) => ({
+    ActivityId: Number(item.ActivityId ?? item.activityId ?? item.id ?? 0),
+    ActivityName: String(item.ActivityName ?? item.activityName ?? item.name ?? ''),
+  }));
+};
+
+export const createActivity = async (name: string): Promise<LivelihoodActivity> => {
+  // POST /activity?ActivityName=...
+  const response = await api.post('/activity', null, {
+    params: { ActivityName: name },
+  });
+  return response.data;
+};
+
+export const updateActivity = async (id: number, name: string): Promise<void> => {
+  // PUT /activity?ActivityId=...&ActivityName=...
+  await api.put('/activity', null, {
+    params: { ActivityId: id, ActivityName: name },
+  });
+};
+
+export const deleteActivity = async (id: number): Promise<void> => {
+  // DELETE /activity?ActivityId=...
+  await api.delete('/activity', {
+    params: { ActivityId: id },
+  });
+};
+
 export const masterService = {
   getDistricts,
   getBlocks: async (districtId: number | string): Promise<Block[]> => {
@@ -162,4 +273,16 @@ export const masterService = {
   getVillages,
   getGramPanchayats,
   getDashboardCounts,
+  getSubCategories,
+  createSubCategory,
+  updateSubCategory,
+  deleteSubCategory,
+  getRoleById,
+  createRole,
+  updateRole,
+  deleteRole,
+  getActivities,
+  createActivity,
+  updateActivity,
+  deleteActivity,
 };

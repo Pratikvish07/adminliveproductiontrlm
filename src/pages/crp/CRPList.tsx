@@ -650,7 +650,7 @@ const CRPList: React.FC = () => {
                       </div>
                       <div>
                         <label>Village</label>
-                        <span>{String(record.village ?? record.villageId ?? '-')}</span>
+                        <span>{String(record.village ?? record.villagename ?? '-')}</span>
                       </div>
                       <div>
                         <label>Created</label>
