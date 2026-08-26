@@ -1,0 +1,311 @@
+import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import Input from '../../components/common/Input';
+import Button from '../../components/common/Button';
+import { authService } from '../../services/authService';
+import { useAuth } from '../../context/AuthContext';
+import heroImage from '../../assets/hero.png';
+import { isLikelyScopeId } from '../../utils/helpers';
+import { normalizeRoleId, fetchRoles } from '../../utils/roleAccess';
+import { setStoredRole, setStoredToken } from '../../utils/authStorage';
+import './Login.css';
+
+const getFirstValue = (record: Record<string, unknown> | undefined, keys: string[]): string => {
+  if (!record) {
+    return '';
+  }
+
+  for (const key of keys) {
+    const value = record[key];
+    if (value !== undefined && value !== null && String(value).trim() !== '') {
+      return String(value);
+    }
+  }
+
+  return '';
+};
+
+const resolveUserId = (response: any, livelihoodTrackerId: string): string => {
+  const candidate = response?.user?.staffId
+    ?? response?.user?.id
+    ?? response?.staffId
+    ?? response?.id;
+
+  if (candidate !== undefined && candidate !== null && String(candidate).trim()) {
+    return String(candidate);
+  }
+
+  return livelihoodTrackerId;
+};
+
+const extractAuthToken = (response: any): string => {
+  const token = response?.token
+    ?? response?.accessToken
+    ?? response?.access_token
+    ?? response?.jwt
+    ?? response?.user?.token
+    ?? response?.user?.accessToken;
+
+  return typeof token === 'string' ? token.trim() : '';
+};
+
+/* ── Stats shown on the left panel ── */
+const STATS = [
+  { value: '8+',   label: 'Districts' },
+  { value: '12k+', label: 'CRP Records' },
+  { value: '100%', label: 'Secure' },
+];
+
+const Login: React.FC = () => {
+  const [livelihoodTrackerId, setLivelihoodTrackerId] = useState('');
+  const [password, setPassword]                       = useState('');
+  const [showPassword, setShowPassword]               = useState(false);
+  const [loading, setLoading]                         = useState(false);
+  const [error, setError]                             = useState('');
+
+  const { login }  = useAuth();
+  const navigate   = useNavigate();
+
+  /* ── Validation ── */
+  const isFormValid = livelihoodTrackerId.trim().length > 0 && password.length >= 4;
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (loading) return;
+    if (!isFormValid) return;
+
+    setLoading(true);
+    setError('');
+
+    try {
+      const response = await authService.login({ livelihoodTrackerId, password });
+      const authToken = extractAuthToken(response);
+
+      if (!authToken) {
+        throw new Error('Login succeeded, but no access token was returned by the server.');
+      }
+
+      // Prefer numeric roleId directly from API response (most reliable)
+      const rawRoleId =
+        response?.user?.roleId ?? response?.user?.RoleId ??
+        response?.roleId ?? response?.RoleId ??
+        response?.user?.role ?? response?.role;
+      const resolvedRole = normalizeRoleId(rawRoleId);
+      const roleId = resolvedRole;
+      const role = resolvedRole;
+
+      // Hydrate role cache for names/labels
+      fetchRoles().catch(console.error);
+      const resolvedUserId = resolveUserId(response, livelihoodTrackerId);
+      const responseUser = response?.user && typeof response.user === 'object'
+        ? response.user as Record<string, unknown>
+        : undefined;
+      const responseRoot = response && typeof response === 'object'
+        ? response as Record<string, unknown>
+        : undefined;
+      const resolvedDistrictId = getFirstValue(responseUser, ['districtId', 'DistrictId', 'district', 'District'])
+        || getFirstValue(responseRoot, ['districtId', 'DistrictId', 'district', 'District']);
+      const resolvedBlockId = getFirstValue(responseUser, ['blockId', 'BlockId', 'block', 'Block'])
+        || getFirstValue(responseRoot, ['blockId', 'BlockId', 'block', 'Block']);
+      const resolvedDistrictName = getFirstValue(responseUser, ['districtName', 'DistrictName'])
+        || getFirstValue(responseRoot, ['districtName', 'DistrictName']);
+      const resolvedBlockName = getFirstValue(responseUser, ['blockName', 'BlockName'])
+        || getFirstValue(responseRoot, ['blockName', 'BlockName']);
+      const resolvedEmail = getFirstValue(responseUser, ['email', 'Email', 'officialEmail', 'OfficialEmail'])
+        || getFirstValue(responseRoot, ['email', 'Email', 'officialEmail', 'OfficialEmail']);
+      const resolvedName = getFirstValue(responseUser, ['name', 'Name', 'officialName', 'OfficialName'])
+        || getFirstValue(responseRoot, ['name', 'Name', 'officialName', 'OfficialName'])
+        || livelihoodTrackerId;
+      const normalizedDistrictId = isLikelyScopeId(resolvedDistrictId) ? resolvedDistrictId : '';
+      const normalizedBlockId = isLikelyScopeId(resolvedBlockId) ? resolvedBlockId : '';
+      const normalizedDistrictName =
+        resolvedDistrictName || (!isLikelyScopeId(resolvedDistrictId) ? resolvedDistrictId : '');
+      const normalizedBlockName =
+        resolvedBlockName || (!isLikelyScopeId(resolvedBlockId) ? resolvedBlockId : '');
+      const user = response.user
+        ? {
+            id:    resolvedUserId,
+            staffId: response.user.staffId ? String(response.user.staffId) : response.staffId ? String(response.staffId) : resolvedUserId,
+            livelihoodTrackerId: response.user.livelihoodTrackerId ?? response.livelihoodTrackerId ?? livelihoodTrackerId,
+            email: resolvedEmail,
+            name:  resolvedName,
+            role,
+            roleId,
+            districtId: normalizedDistrictId,
+            blockId: normalizedBlockId,
+            districtName: normalizedDistrictName,
+            blockName: normalizedBlockName,
+          }
+        : {
+            id: resolvedUserId,
+            staffId: response.staffId ? String(response.staffId) : response.id ? String(response.id) : '',
+            livelihoodTrackerId,
+            email: resolvedEmail,
+            name: resolvedName,
+            role,
+            roleId,
+            districtId: normalizedDistrictId,
+            blockId: normalizedBlockId,
+            districtName: normalizedDistrictName,
+            blockName: normalizedBlockName,
+          };
+
+      setStoredToken(authToken);
+      if (roleId) {
+        setStoredRole(roleId);
+      }
+
+      login(user);
+      navigate('/dashboard');
+    } catch (err: any) {
+      const status = err?.response?.status;
+      const detail = err?.response?.data?.detail;
+      const message = err?.response?.data?.message;
+      const rawMessage = typeof err?.message === 'string' ? err.message : '';
+
+      setError(
+        rawMessage === 'Login succeeded, but no access token was returned by the server.' ? 'Sign in could not be completed because the server did not return a valid session token.' :
+        detail === 'Invalid credentials' ? 'Invalid credentials. Please check your User ID and password.' :
+        status === 401 ? 'Invalid credentials. Please check your User ID and password.' :
+        status >= 500 ? detail || 'Server error during sign in. Please try again in a moment.' :
+        detail || message || rawMessage || 'Invalid credentials. Please check your User ID and password.'
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="login-container">
+      <div className="login-card">
+
+        {/* ══ LEFT — visual / branding panel ══════════════════════ */}
+        <div className="login-visual">
+
+          {/* Middle: logo badge */}
+          <div className="visual-badge">
+            <img
+              src="/assets/logo.jpg"
+              alt="Tripura Rural Livelihood Mission"
+              className="visual-logo"
+            />
+            <div className="visual-badge-label">
+              <span className="vbl-name">Tripura Rural Livelihood Mission</span>
+              <span className="vbl-sub">ত্রিপুরা গ্রামীণ জীবিকা মিশন</span>
+            </div>
+          </div>
+
+          {/* Bottom: stats row */}
+          <div className="visual-stats">
+            {STATS.map((s) => (
+              <div className="visual-stat" key={s.label}>
+                <span className="vs-value">{s.value}</span>
+                <span className="vs-label">{s.label}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Decorative hero illustration */}
+          <img src={heroImage} alt="" className="visual-hero" aria-hidden="true" />
+        </div>
+
+        {/* ══ RIGHT — form panel ══════════════════════════════════ */}
+        <div className="login-panel">
+
+          {/* Logo + org label + heading */}
+          <div className="logo-section">
+            <img
+              src="/assets/logo.jpg"
+              alt="Tripura Rural Livelihood Mission"
+              className="logo"
+            />
+            <p className="panel-tag">TRLM Operations Console</p>
+            <h2 className="panel-title">Sign in to continue</h2>
+          </div>
+
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="form-section" noValidate>
+
+            {/* Error banner */}
+            {error && (
+              <div className="error" role="alert">
+                <span className="error-icon">!</span>
+                {error}
+              </div>
+            )}
+
+            {/* User ID */}
+            <div className="field-shell">
+              <Input
+                label="Livelihood Tracker ID"
+                type="text"
+                value={livelihoodTrackerId}
+                onChange={(e) => setLivelihoodTrackerId(e.target.value)}
+                placeholder="e.g. LT-001"
+              />
+            </div>
+
+            {/* Password with show/hide toggle */}
+            <div className="field-shell field-shell--password">
+              <Input
+                label="Password"
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter your password"
+              />
+              <button
+                type="button"
+                className="toggle-pw"
+                onClick={() => setShowPassword((v) => !v)}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? '🙈' : '👁'}
+              </button>
+            </div>
+
+            {/* Forgot password */}
+            <div className="form-meta">
+              <Link to="/forgot-password" className="forgot-link">
+                Forgot password?
+              </Link>
+            </div>
+
+            {/* Submit */}
+            <Button
+              type="submit"
+              className="login-btn"
+              disabled={loading || !isFormValid}
+            >
+              {loading ? (
+                <>
+                  <span className="btn-spinner" aria-hidden="true" />
+                  Signing In…
+                </>
+              ) : (
+                <>
+                  Sign In
+                  <span className="btn-arrow" aria-hidden="true">→</span>
+                </>
+              )}
+            </Button>
+          </form>
+
+          {/* Footer */}
+          <div className="footer">
+            <p>
+              Don&apos;t have an account?{' '}
+              <Link to="/signup">Request access</Link>
+            </p>
+            <p className="footer-secure">
+              🔒 Authorised personnel only · All sessions are logged
+            </p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  );
+};
+
+export default Login;

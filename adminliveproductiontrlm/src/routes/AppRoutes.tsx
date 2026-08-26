@@ -1,0 +1,153 @@
+import React from 'react';
+import { Routes, Route } from 'react-router-dom';
+import ProtectedRoute from './ProtectedRoute';
+import Layout from '../components/layout/Layout';
+import Login from '../pages/auth/Login';
+import Signup from '../pages/auth/Signup';
+import Dashboard from '../pages/dashboard/Dashboard';
+import Village from '../pages/master/Village';
+import GramPanchayat from '../pages/master/GramPanchayat';
+import SubCategory from '../pages/master/SubCategory';
+import RolePage from '../pages/master/Role';
+import ActivityPage from '../pages/master/Activity';
+import SeasonPage from '../pages/master/Season';
+import ShgLivelihoodPage from '../pages/master/ShgLivelihood';
+import ProductionPage from '../pages/master/Production';
+import CrpTypePage from '../pages/master/CrpType';
+import LandTypePage from '../pages/master/LandType';
+import FinancialSupportPage from '../pages/financial/FinancialSupport';
+import IncomeProfilePage from '../pages/admin/IncomeProfile';
+// Staff
+import AllUsers from '../pages/staff/AllUsers';
+import StaffApproval from '../pages/staff/StaffApproval';
+// CRP
+import CRPList from '../pages/crp/CRPList';
+import CRPApproval from '../pages/crp/CRPApproval';
+import CRPCreate from '../pages/crp/CRPCreate';
+import SHGMemberList from '../pages/crp/SHGMemberList';
+// Payment
+import LoanTracking from '../pages/payment/LoanTracking';
+import LoanApproval from '../pages/payment/LoanApproval';
+import Payments from '../pages/payment/Payments';
+import Reports from '../pages/reports/Reports';
+import Analytics from '../pages/analytics/Analytics';
+import { ROLE_IDS } from '../utils/roleAccess';
+
+const AppRoutes: React.FC = () => {
+  return (
+    <Routes>
+      <Route path="/login" element={<Login />} />
+      <Route path="/signup" element={<Signup />} />
+      <Route
+        element={
+          <ProtectedRoute>
+            <Layout />
+          </ProtectedRoute>
+        }
+      >
+        <Route path="/" element={<Dashboard />} />
+        <Route path="/dashboard" element={<Dashboard />} />
+        {/* Master */}
+        <Route
+          path="/master/village"
+          element={<ProtectedRoute allowedRoles={[ROLE_IDS.STATE_ADMIN, ROLE_IDS.DISTRICT_STAFF, ROLE_IDS.BLOCK_STAFF]}><Village /></ProtectedRoute>}
+        />
+        <Route
+          path="/master/gram-panchayat"
+          element={<ProtectedRoute allowedRoles={[ROLE_IDS.STATE_ADMIN, ROLE_IDS.DISTRICT_STAFF, ROLE_IDS.BLOCK_STAFF]}><GramPanchayat /></ProtectedRoute>}
+        />
+        <Route
+          path="/master/sub-category"
+          element={<ProtectedRoute><SubCategory /></ProtectedRoute>}
+        />
+        <Route
+          path="/master/roles"
+          element={<ProtectedRoute allowedRoles={[ROLE_IDS.STATE_ADMIN]}><RolePage /></ProtectedRoute>}
+        />
+        <Route
+          path="/master/activities"
+          element={<ProtectedRoute allowedRoles={[ROLE_IDS.STATE_ADMIN]}><ActivityPage /></ProtectedRoute>}
+        />
+        <Route
+          path="/master/seasons"
+          element={<ProtectedRoute allowedRoles={[ROLE_IDS.STATE_ADMIN]}><SeasonPage /></ProtectedRoute>}
+        />
+        <Route
+          path="/master/shg-livelihood"
+          element={<ProtectedRoute allowedRoles={[ROLE_IDS.STATE_ADMIN]}><ShgLivelihoodPage /></ProtectedRoute>}
+        />
+        <Route
+          path="/master/production"
+          element={<ProtectedRoute allowedRoles={[ROLE_IDS.STATE_ADMIN]}><ProductionPage /></ProtectedRoute>}
+        />
+        <Route
+          path="/master/crp-type"
+          element={<ProtectedRoute allowedRoles={[ROLE_IDS.STATE_ADMIN]}><CrpTypePage /></ProtectedRoute>}
+        />
+        <Route
+          path="/master/land-type"
+          element={<ProtectedRoute allowedRoles={[ROLE_IDS.STATE_ADMIN]}><LandTypePage /></ProtectedRoute>}
+        />
+        {/* Administration — Financial Support */}
+        <Route
+          path="/financial-support"
+          element={<ProtectedRoute allowedRoles={[ROLE_IDS.STATE_ADMIN]}><FinancialSupportPage /></ProtectedRoute>}
+        />
+        {/* Administration — Income Profile */}
+        <Route
+          path="/income-profile"
+          element={<ProtectedRoute allowedRoles={[ROLE_IDS.STATE_ADMIN]}><IncomeProfilePage /></ProtectedRoute>}
+        />
+        {/* Staff */}
+        <Route
+          path="/staff"
+          element={<ProtectedRoute allowedRoles={[ROLE_IDS.STATE_ADMIN]}><StaffApproval /></ProtectedRoute>}
+        />
+        <Route
+          path="/staff/approval"
+          element={<ProtectedRoute allowedRoles={[ROLE_IDS.STATE_ADMIN]}><StaffApproval /></ProtectedRoute>}
+        />
+        <Route
+          path="/staff/users"
+          element={<ProtectedRoute allowedRoles={[ROLE_IDS.STATE_ADMIN]}><AllUsers /></ProtectedRoute>}
+        />
+        <Route
+          path="/staff/create-user"
+          element={<ProtectedRoute allowedRoles={[ROLE_IDS.STATE_ADMIN]}><Signup /></ProtectedRoute>}
+        />
+        {/* CRP */}
+        <Route
+          path="/crp/list"
+          element={<ProtectedRoute allowedRoles={[ROLE_IDS.STATE_ADMIN, ROLE_IDS.DISTRICT_STAFF, ROLE_IDS.BLOCK_STAFF]}><CRPList /></ProtectedRoute>}
+        />
+        <Route
+          path="/crp/approval"
+          element={<ProtectedRoute allowedRoles={[ROLE_IDS.BLOCK_STAFF]}><CRPApproval /></ProtectedRoute>}
+        />
+        <Route
+          path="/crp/create"
+          element={<ProtectedRoute allowedRoles={[ROLE_IDS.BLOCK_STAFF]}><CRPCreate /></ProtectedRoute>}
+        />
+        <Route
+          path="/crp/:crpId/shg-members"
+          element={<ProtectedRoute allowedRoles={[ROLE_IDS.STATE_ADMIN, ROLE_IDS.DISTRICT_STAFF, ROLE_IDS.BLOCK_STAFF]}><SHGMemberList /></ProtectedRoute>}
+        />
+        {/* Payment */}
+        <Route path="/payment/loan-tracking" element={<LoanTracking />} />
+        <Route path="/payment/loan-approval" element={<LoanApproval />} />
+        <Route path="/payment/payments" element={<Payments />} />
+        <Route
+          path="/reports"
+          element={<ProtectedRoute allowedRoles={[ROLE_IDS.STATE_ADMIN, ROLE_IDS.DISTRICT_STAFF, ROLE_IDS.BLOCK_STAFF]}><Reports /></ProtectedRoute>}
+        />
+        <Route
+          path="/analytics"
+          element={<ProtectedRoute allowedRoles={[ROLE_IDS.STATE_ADMIN]}><Analytics /></ProtectedRoute>}
+        />
+      </Route>
+      <Route path="*" element={<div>404 - Not Found</div>} />
+    </Routes>
+  );
+};
+
+export default AppRoutes;

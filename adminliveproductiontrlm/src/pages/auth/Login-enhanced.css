@@ -1,0 +1,638 @@
+/* ============================================================
+   Login.css — Enhanced TRLM Operations Console (Gov-Portal Theme)
+   Upgraded: gov-portal vars, animated stats, textures, glows, micro-interactions.
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,700&family=DM+Sans:wght@300;400;500;600;700&display=swap');
+@import '../styles/gov-portal.css';
+
+/* ─── Gov-Portal Token Overrides for Login ─────────────────── */
+:root {
+  --gov-accent-gold: #d7a14b;
+  --gov-gold-glow: rgba(215, 161, 75, 0.2);
+  --login-navy-deep: #0c1b2e;
+  --login-cream: #f9f9f5;
+  --login-gold: #d4af37;
+  --login-shadow-glow: 0 0 0 1px rgba(215, 161, 75, 0.15);
+}
+
+/* ─── Reset ───────────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* ============================================================
+   .login-container  — full-viewport hero backdrop
+   ============================================================ */
+.login-container {
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 400;
+  background:
+    radial-gradient(circle at 20% 10%, rgba(39, 106, 152, 0.15) 0%, transparent 50%),
+    radial-gradient(circle at 80% 90%, var(--gov-accent-gold) 0%, transparent 45%),
+    linear-gradient(135deg, var(--gov-primary-strong) 0%, #143b61 50%, #1f6997 100%);
+  position: relative;
+  overflow: hidden;
+  animation: bgShift 12s ease-in-out infinite alternate;
+}
+
+@keyframes bgShift {
+  0% { background-size: 100% 100%; }
+  100% { background-size: 110% 110%; }
+}
+
+/* Animated particles */
+.login-container::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(2px 2px at 20px 30px, #fff, transparent),
+    radial-gradient(2px 2px at 40px 70px, rgba(255,255,255,0.8), transparent),
+    radial-gradient(1px 1px at 90px 40px, #fff, transparent),
+    radial-gradient(1px 1px at 130px 80px, rgba(255,255,255,0.6), transparent);
+  background-repeat: repeat;
+  background-size: 200px 100px;
+  animation: particles 20s linear infinite;
+  opacity: 0.05;
+  pointer-events: none;
+}
+
+@keyframes particles {
+  from { transform: translateY(0) rotate(0deg); }
+  to { transform: translateY(-100px) rotate(360deg); }
+}
+
+/* ============================================================
+   .login-card  — enhanced glassmorphism grid
+   ============================================================ */
+.login-card {
+  width: min(900px, 100%);
+  display: grid;
+  grid-template-columns: 1fr 400px;
+  backdrop-filter: blur(20px);
+  background: rgba(255, 255, 255, 0.11);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 28px;
+  overflow: hidden;
+  position: relative;
+  z-index: 1;
+  box-shadow:
+    0 32px 80px rgba(0, 0, 0, 0.45),
+    var(--login-shadow-glow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  animation: cardFloat 4s ease-in-out infinite alternate;
+}
+
+@keyframes cardFloat {
+  0% { transform: translateY(0) rotate(0deg); }
+  100% { transform: translateY(-4px) rotate(0.5deg); }
+}
+
+@media (max-width: 800px) {
+  .login-card { grid-template-columns: 1fr; }
+}
+
+/* ============================================================
+   .login-visual  — Enhanced LEFT: textured navy showcase
+   ============================================================ */
+.login-visual {
+  background:
+    linear-gradient(135deg, rgba(13, 43, 71, 0.98), rgba(39, 106, 152, 0.95)),
+    /* Texture from dashboard */
+    repeating-linear-gradient(
+      -45deg,
+      transparent,
+      transparent 20px,
+      rgba(255, 255, 255, 0.02) 20px,
+      rgba(255, 255, 255, 0.02) 21px
+    );
+  padding: 48px 40px 36px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: relative;
+  overflow: hidden;
+  border-right: 1px solid rgba(255, 255, 255, 0.12);
+  min-height: 520px;
+}
+
+.login-visual::before {
+  content: '';
+  position: absolute;
+  width: 500px;
+  height: 500px;
+  top: -200px;
+  left: -150px;
+  background: radial-gradient(circle, var(--gov-gold-glow) 0%, transparent 60%);
+  animation: glowPulse 3s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+
+@keyframes glowPulse {
+  0% { opacity: 0.4; transform: scale(1); }
+  100% { opacity: 0.7; transform: scale(1.05); }
+}
+
+/* Enhanced badge with hover glow */
+.visual-badge {
+  position: relative;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 22px 16px 16px;
+  border-radius: 999px;
+  background: rgba(20, 59, 97, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow:
+    0 16px 32px rgba(0, 0, 0, 0.3),
+    0 0 0 1px rgba(215, 161, 75, 0.3);
+  transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  margin-inline: auto;
+}
+
+.visual-badge:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow:
+    0 24px 48px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(215, 161, 75, 0.5);
+}
+
+.visual-logo {
+  width: 92px;
+  height: 92px;
+  border-radius: 50%;
+  object-fit: contain;
+  background: rgba(255, 255, 255, 0.95);
+  padding: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  transition: transform 0.3s ease;
+}
+
+.visual-badge:hover .visual-logo {
+  transform: scale(1.05);
+}
+
+.vbl-name {
+  color: #f8f6f3;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+}
+
+.vbl-sub {
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+/* Animated stats grid */
+.visual-stats {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  margin-top: 32px;
+}
+
+.visual-stat {
+  padding: 20px 16px;
+  border-radius: 20px;
+  background: rgba(20, 59, 97, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.25);
+  transition: all 0.3s ease;
+  cursor: default;
+  overflow: hidden;
+  position: relative;
+}
+
+.visual-stat::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.05) 50%, transparent 100%);
+  transform: translateX(-100%);
+  transition: transform 0.6s;
+}
+
+.visual-stat:hover::before {
+  transform: translateX(100%);
+}
+
+.visual-stat:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.35);
+}
+
+.vs-value {
+  display: block;
+  color: #fff;
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  animation: countUp 2s ease-out forwards;
+}
+
+.vs-label {
+  display: block;
+  margin-top: 10px;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+@keyframes countUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Enhanced hero with parallax */
+.visual-hero {
+  position: absolute;
+  right: 24px;
+  bottom: 24px;
+  width: min(42%, 180px);
+  opacity: 0.15;
+  filter: drop-shadow(0 16px 32px rgba(0, 0, 0, 0.4));
+  animation: floatAdvanced 6s ease-in-out infinite;
+  z-index: 1;
+  transition: transform 0.4s ease;
+}
+
+.login-visual:hover .visual-hero {
+  transform: scale(1.1);
+}
+
+@keyframes floatAdvanced {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  33% { transform: translateY(-6px) rotate(2deg); }
+  66% { transform: translateY(-12px) rotate(-1deg); }
+}
+
+/* ============================================================
+   .login-panel  — RIGHT: glass form surface
+   ============================================================ */
+.login-panel {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(16px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 40px 44px;
+  gap: 24px;
+  position: relative;
+  overflow: hidden;
+  border-left: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.login-panel::before {
+  content: '';
+  position: absolute;
+  width: 300px;
+  height: 300px;
+  top: -100px;
+  right: -80px;
+  background: radial-gradient(circle, var(--gov-gold-glow) 0%, transparent 55%);
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+.logo-section {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  position: relative;
+  z-index: 2;
+}
+
+.logo {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  object-fit: contain;
+  background: rgba(255, 255, 255, 0.95);
+  border: 2px solid rgba(215, 161, 75, 0.4);
+  padding: 4px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  transition: all 0.3s ease;
+}
+
+.logo:hover {
+  transform: rotate(360deg) scale(1.1);
+}
+
+.panel-tag {
+  font-size: 10.5px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--gov-accent-gold);
+  font-weight: 600;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.panel-tag::before {
+  content: '';
+  width: 16px;
+  height: 1.5px;
+  background: var(--gov-accent-gold);
+  opacity: 0.6;
+}
+
+.panel-title {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(24px, 3vw, 32px);
+  background: linear-gradient(135deg, var(--gov-text), #17324a);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+.logo-section::after {
+  content: '';
+  display: block;
+  width: 100%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(215, 161, 75, 0.4), transparent);
+  margin-top: 16px;
+}
+
+/* ============================================================
+   Form Elements — Enhanced
+   ============================================================ */
+.form-section {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  z-index: 2;
+}
+
+.error {
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--gov-danger);
+  background: rgba(196, 69, 54, 0.1);
+  color: var(--gov-danger);
+  font-size: 14px;
+  font-weight: 500;
+  animation: errorShake 0.5s ease-out;
+}
+
+@keyframes errorShake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+
+.field-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.field-shell label {
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--gov-text-muted);
+  font-weight: 600;
+}
+
+.field-shell input.input {
+  width: 100%;
+  min-height: 60px;
+  padding: 18px 20px;
+  border-radius: 18px;
+  border: 2px solid rgba(20, 59, 97, 0.2);
+  background: rgba(255, 255, 255, 0.9);
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--gov-text);
+  outline: none;
+  transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+}
+
+.field-shell input.input:focus {
+  border-color: var(--gov-accent-gold);
+  box-shadow:
+    0 0 0 4px var(--gov-gold-glow),
+    0 16px 40px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 1);
+  transform: translateY(-2px) scale(1.01);
+}
+
+.field-shell--password {
+  position: relative;
+}
+
+.field-shell--password input.input {
+  padding-right: 70px;
+}
+
+.toggle-pw {
+  position: absolute;
+  right: 18px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 40px;
+  height: 40px;
+  border: none;
+  background: rgba(255, 255, 255, 0.7);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--gov-text-muted);
+  font-size: 18px;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.toggle-pw:hover {
+  background: var(--gov-accent-gold);
+  color: var(--gov-primary-strong);
+  transform: translateY(-50%) scale(1.1);
+}
+
+.form-meta {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.forgot-link {
+  font-size: 14px;
+  color: var(--gov-primary-soft);
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.3s ease;
+}
+
+.forgot-link:hover {
+  color: var(--gov-accent-gold);
+  text-decoration: underline;
+}
+
+/* ============================================================
+   Enhanced Button Overrides
+   ============================================================ */
+.login-btn.btn-primary {
+  width: 100% !important;
+  min-height: 64px !important;
+  padding: 20px 24px !important;
+  border-radius: 20px !important;
+  border: none !important;
+  background: linear-gradient(135deg, var(--gov-primary), var(--gov-primary-soft)) !important;
+  color: #fff !important;
+  font-family: 'DM Sans', sans-serif !important;
+  font-size: 15px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.1em !important;
+  text-transform: uppercase !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 12px !important;
+  position: relative !important;
+  overflow: hidden !important;
+  transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1) !important;
+  box-shadow:
+    0 16px 40px rgba(20, 59, 97, 0.3),
+    0 4px 12px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.login-btn.btn-primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, var(--gov-primary-soft), #276a98) !important;
+  transform: translateY(-4px) scale(1.02) !important;
+  box-shadow:
+    0 24px 60px rgba(20, 59, 97, 0.45),
+    0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+.login-btn.btn-primary:active {
+  transform: translateY(-2px) scale(0.98) !important;
+}
+
+.login-btn.btn-primary:disabled {
+  opacity: 0.6 !important;
+  cursor: not-allowed !important;
+  transform: none !important;
+}
+
+/* Shimmer + spinner */
+.login-btn.btn-primary::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+  transform: translateX(-100%);
+  transition: transform 0.6s ease;
+}
+
+.login-btn.btn-primary:hover:not(:disabled)::after {
+  transform: translateX(100%);
+}
+
+.login-btn .btn-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.btn-arrow {
+  margin-left: 4px;
+  transition: margin-left 0.3s ease;
+}
+
+.login-btn.btn-primary:hover .btn-arrow {
+  margin-left: 8px;
+}
+
+/* ============================================================
+   Footer
+   ============================================================ */
+.footer {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+  padding-top: 20px;
+  border-top: 1px solid rgba(20, 59, 97, 0.2);
+}
+
+.footer p {
+  font-size: 13.5px;
+  color: var(--gov-text-muted);
+  margin: 0 0 8px;
+  font-weight: 500;
+}
+
+.footer a {
+  color: var(--gov-accent-gold);
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.3s ease;
+}
+
+.footer a:hover {
+  text-decoration: underline;
+  color: #e6bb61;
+}
+
+.footer-secure {
+  font-size: 12px;
+  color: rgba(31, 143, 99, 0.9);
+  font-weight: 500;
+}
+
+/* ============================================================
+   Mobile Responsiveness
+   ============================================================ */
+@media (max-width: 800px) {
+  .login-visual {
+    min-height: 260px;
+    padding: 32px 28px;
+    border-right: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  }
+  .login-panel { padding: 32px 28px; gap: 20px; }
+}
+
+@media (max-width: 480px) {
+  .login-container { padding: 16px; }
+  .visual-stats { grid-template-columns: 1fr; gap: 12px; }
+}
