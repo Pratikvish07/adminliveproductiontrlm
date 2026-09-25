@@ -14,8 +14,8 @@
   border-radius: 1.35rem;
   background:
     radial-gradient(circle at top left, rgba(46, 125, 90, 0.24), transparent 32rem),
-    linear-gradient(135deg, #f7fbf5 0%, #eef7f2 45%, #e6f0f8 100%);
-  box-shadow: 0 20px 60px rgba(30, 65, 87, 0.1);
+    linear-gradient(135deg, #f7fbf5 0%, #eef7f2 45%, #e5efec 100%);
+  box-shadow: 0 20px 60px rgba(11, 45, 44, 0.1);
 }
 
 .analytics-hero::after {
@@ -26,7 +26,7 @@
   width: 16rem;
   height: 16rem;
   border-radius: 999px;
-  background: rgba(23, 50, 74, 0.08);
+  background: rgba(11, 45, 44, 0.08);
 }
 
 .analytics-hero__copy {
@@ -47,7 +47,7 @@
 .analytics-hero h2 {
   max-width: 760px;
   margin: 0.4rem 0;
-  color: #18324a;
+  color: #0b2d2c;
   font-size: clamp(1.6rem, 3vw, 2.45rem);
   line-height: 1.08;
 }
@@ -55,7 +55,7 @@
 .analytics-hero p {
   max-width: 780px;
   margin: 0;
-  color: #5e7486;
+  color: #5a6b6e;
   line-height: 1.65;
 }
 
@@ -70,15 +70,15 @@
   padding: 0.8rem 1.1rem;
   border: 0;
   border-radius: 999px;
-  background: #17324a;
+  background: #0b2d2c;
   color: #fff;
   font-weight: 800;
   cursor: pointer;
-  box-shadow: 0 16px 34px rgba(23, 50, 74, 0.22);
+  box-shadow: 0 16px 34px rgba(11, 45, 44, 0.22);
 }
 
 .analytics-download:hover {
-  background: #244f72;
+  background: #0a2f2e;
 }
 
 .analytics-actions {
@@ -102,7 +102,7 @@
   border: 1px solid #d7e4dd;
   border-radius: 1.2rem;
   background: #fff;
-  box-shadow: 0 16px 38px rgba(23, 50, 74, 0.08);
+  box-shadow: 0 16px 38px rgba(11, 45, 44, 0.08);
 }
 
 .analytics-kpi::after {
@@ -115,10 +115,10 @@
   background: var(--kpi-glow);
 }
 
-.analytics-kpi--blue { --kpi-color: #1f5f8b; --kpi-glow: rgba(31, 95, 139, 0.13); }
-.analytics-kpi--green { --kpi-color: #1f8b5b; --kpi-glow: rgba(31, 139, 91, 0.13); }
-.analytics-kpi--amber { --kpi-color: #b36b00; --kpi-glow: rgba(245, 158, 11, 0.18); }
-.analytics-kpi--red { --kpi-color: #b83b3b; --kpi-glow: rgba(220, 38, 38, 0.12); }
+.analytics-kpi--blue { --kpi-color: #2f6690; --kpi-glow: rgba(31, 95, 139, 0.13); }
+.analytics-kpi--green { --kpi-color: #3f6b4a; --kpi-glow: rgba(31, 139, 91, 0.13); }
+.analytics-kpi--amber { --kpi-color: #c1791f; --kpi-glow: rgba(245, 158, 11, 0.18); }
+.analytics-kpi--red { --kpi-color: #a5432f; --kpi-glow: rgba(220, 38, 38, 0.12); }
 
 .analytics-kpi__icon {
   display: grid;
@@ -133,7 +133,7 @@
 
 .analytics-kpi span {
   display: block;
-  color: #6d8394;
+  color: #5a6b6e;
   font-size: 0.68rem;
   font-weight: 900;
   letter-spacing: 0.08em;
@@ -143,7 +143,7 @@
 .analytics-kpi strong {
   display: block;
   margin-top: 0.35rem;
-  color: #17324a;
+  color: #0b2d2c;
   font-size: clamp(1rem, 1.5vw, 1.35rem);
   line-height: 1.12;
 }
@@ -153,7 +153,7 @@
   z-index: 1;
   margin: 0.35rem 0 0;
   font-size: 0.84rem;
-  color: #62798c;
+  color: #5a6b6e;
   line-height: 1.45;
 }
 
@@ -176,7 +176,7 @@
 .analytics-panel {
   min-height: 0;
   padding: 0.85rem;
-  border: 1px solid #d4e0e8;
+  border: 1px solid #e2ddcf;
   border-radius: 1.2rem;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(249, 252, 250, 0.96)),
@@ -198,7 +198,7 @@
 .analytics-panel h2,
 .analytics-panel h3 {
   margin: 0.15rem 0;
-  color: #17324a;
+  color: #0b2d2c;
 }
 
 .analytics-panel h2 {
@@ -211,7 +211,7 @@
 
 .analytics-panel p {
   margin: 0;
-  color: #62798c;
+  color: #5a6b6e;
   font-size: 0.84rem;
   line-height: 1.35;
 }
@@ -240,7 +240,7 @@
   height: 1.75rem;
   border-radius: 0.6rem;
   font-size: 0.76rem;
-  background: #eef6f1;
+  background: #e5efec;
   color: #2f7d5a;
   font-weight: 900;
 }
@@ -248,20 +248,22 @@
 .analytics-bar__meta strong,
 .analytics-mini-row strong {
   display: block;
-  color: #20384c;
+  color: #17262a;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .analytics-bar__meta small,
 .analytics-mini-row small {
   display: block;
   margin-top: 0.12rem;
-  color: #7890a0;
+  color: #5a6b6e;
   font-size: 0.78rem;
 }
 
 .analytics-bar__meta b,
 .analytics-mini-row b {
-  color: #17324a;
+  color: #0b2d2c;
   font-size: 0.82rem;
 }
 
@@ -270,7 +272,7 @@
   overflow: hidden;
   height: 0.5rem;
   border-radius: 999px;
-  background: #edf3f6;
+  background: #e5efec;
 }
 
 .analytics-bar__track span,

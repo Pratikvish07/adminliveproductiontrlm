@@ -1,38 +1,35 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import { X } from 'lucide-react';
 import PageShell from '../../components/common/PageShell';
 import Loader from '../../components/common/Loader';
-import { getSHGTrackingReports, type SHGTrackingRecord } from '../../services/reportService';
+import { getShgLivelihoods, getLivelihoodImages } from '../../services/masterService';
+import { crpService } from '../../services/crpService';
+import { getSHGTrackingReports } from '../../services/reportService';
+import { getCRPid, toCRPRecords } from '../crp/crpUtils';
+import type { ShgLivelihood, LivelihoodImage } from '../../types/master.types';
 import './Reports.css';
+import '../master/MasterData.css';
 
-type ReportRecord = {
-  reportId: string;
-  crpId: string;
-  crpName: string;
-  district: string;
-  block: string;
-  gramPanchayat: string;
-  village: string;
-  shgName: string;
-  shgCode: string;
+type CRPOption = { id: string; name: string };
+
+const resolveMediaUrl = (path: string) => {
+  if (path.startsWith('http://') || path.startsWith('https://')) return path;
+  return `https://trlm.pickitover.com/${path.replace(/^\/+/, '')}`;
+};
+
+type MemberReportRecord = {
+  memberId: number;
+  livelihoodId: number;
   memberName: string;
-  memberCategory: string;
+  shgName: string;
   activityName: string;
-  seasonality: string;
-  totalInvestment: number;
-  annualIncomeBefore: number;
-  annualIncomeAfter: number;
-  progressStatus: string;
-  assignedGeoLocation: string;
-  trackingGeoLocation: string;
-  trackingImage: string;
-  trackingVideo: string;
-  imagePath?: string;
-  videoPath?: string;
-  checkInDateTime: string;
-  checkOutDateTime: string;
-  visitDate: string;
-  nextVisitDate: string;
-  geoTagged: boolean;
+  subCategoryName: string;
+  lhCbo: string;
+  geoLocation: string;
+  createdDate: string;
+  hasGeo: boolean;
+  isLhCbo: boolean;
 };
 
 type ReportSectionKey = 'shg' | 'producerGroup' | 'nonProducerGroup' | 'lhCbo' | 'fpc' | 'chc';
@@ -46,8 +43,8 @@ type ReportSection = {
 const reportSections: ReportSection[] = [
   {
     key: 'shg',
-    label: 'SHG Tracking',
-    csvName: 'trlm-shg-tracking-report.csv',
+    label: 'SHG Members',
+    csvName: 'trlm-shg-members-report.csv',
   },
   {
     key: 'producerGroup',
@@ -76,215 +73,41 @@ const reportSections: ReportSection[] = [
   },
 ];
 
-const mapTrackingToReportRecord = (item: SHGTrackingRecord, index: number): ReportRecord => {
-  const hasGeo = Boolean(
-    (item.Latitude && item.Longitude) ||
-    item.GeoStatus === 'Verified' ||
-    item.GeoStatus === 'Checked' ||
-    item.GeoStatus === 'Live'
-  );
-  const latLong = item.Latitude && item.Longitude ? `${item.Latitude}, ${item.Longitude}` : '—';
+const mapLivelihoodToReportRecord = (item: ShgLivelihood): MemberReportRecord => {
+  const hasGeo = Boolean(item.Latitude && item.Longitude);
 
   return {
-    reportId: item.TrackingId ? `TRK-${String(item.TrackingId).padStart(4, '0')}` : `RPT-${String(index + 1).padStart(4, '0')}`,
-    crpId: item.CRPRegistrationId ? `CRP-${item.CRPRegistrationId}` : '—',
-    crpName: item.CRPName || (item.CRPRegistrationId ? `CRP #${item.CRPRegistrationId}` : '—'),
-    district: String(item.District || item.district || '—'),
-    block: String(item.Block || item.block || '—'),
-    gramPanchayat: String(item.GramPanchayat || item.gramPanchayat || '—'),
-    village: String(item.Village || item.village || '—'),
-    shgName: String(item.SHGName || '—'),
-    shgCode: String(item.SHGCode || (item.SHGMemberId ? `SHG-${item.SHGMemberId}` : '—')),
-    memberName: String(item.MemberName || (item.SHGMemberId ? `Member #${item.SHGMemberId}` : '—')),
-    memberCategory: String(item.MemberCategory || '—'),
-    activityName: String(item.ActivityName || item.Remarks || '—'),
-    seasonality: String(item.Seasonality || '—'),
-    totalInvestment: Number(item.TotalInvestment || 0),
-    annualIncomeBefore: Number(item.AnnualIncomeBefore || 0),
-    annualIncomeAfter: Number(item.AnnualIncomeAfter || 0),
-    progressStatus: String(item.GeoStatus || item.ProgressStatus || 'Pending'),
-    assignedGeoLocation: latLong,
-    trackingGeoLocation: latLong,
-    trackingImage: item.ImagePath ? 'uploaded' : (item.ImageStatus?.toLowerCase() === 'uploaded' ? 'uploaded' : 'not uploaded'),
-    trackingVideo: item.VideoPath ? 'uploaded' : (item.VideoStatus?.toLowerCase() === 'uploaded' ? 'uploaded' : 'not uploaded'),
-    imagePath: item.ImagePath || undefined,
-    videoPath: item.VideoPath || undefined,
-    checkInDateTime: item.CreatedDate ? new Date(item.CreatedDate).toLocaleString('en-IN') : '—',
-    checkOutDateTime: item.CheckOutDate ? new Date(item.CheckOutDate).toLocaleString('en-IN') : '—',
-    visitDate: item.CreatedDate ? new Date(item.CreatedDate).toLocaleDateString('en-IN') : '—',
-    nextVisitDate: item.NextVisitDate ? String(item.NextVisitDate) : '—',
-    geoTagged: hasGeo,
+    memberId: item.MemberId,
+    livelihoodId: item.LivelihoodId,
+    memberName: item.MemberName || `Member #${item.MemberId}`,
+    shgName: item.SHGName || '—',
+    activityName: item.ActivityName || '—',
+    subCategoryName: item.SubCategoryName || '—',
+    lhCbo: item.IsLH_CBO ? (item.LH_CBO_Name || 'Yes') : 'No',
+    geoLocation: hasGeo ? `${item.Latitude}, ${item.Longitude}` : '—',
+    createdDate: item.CreatedDate ? new Date(item.CreatedDate).toLocaleDateString('en-IN') : '—',
+    hasGeo,
+    isLhCbo: item.IsLH_CBO,
   };
 };
 
-const columnLabels: Record<keyof ReportRecord, string> = {
-  reportId: 'Report ID',
-  crpId: 'CRP ID',
-  crpName: 'CRP Name',
-  district: 'District',
-  block: 'Block',
-  gramPanchayat: 'Gram Panchayat',
-  village: 'Village',
-  shgName: 'SHG Name',
-  shgCode: 'SHG Code',
+const columnLabels: Record<keyof Omit<MemberReportRecord, 'memberId' | 'livelihoodId' | 'hasGeo' | 'isLhCbo'>, string> = {
   memberName: 'Member Name',
-  memberCategory: 'Social Category',
+  shgName: 'SHG Name',
   activityName: 'Activity',
-  seasonality: 'Season',
-  totalInvestment: 'Total Investment',
-  annualIncomeBefore: 'Annual Income Before',
-  annualIncomeAfter: 'Annual Income After',
-  progressStatus: 'Progress Status',
-  assignedGeoLocation: 'Assigned Geo Location (Lat, Long)',
-  trackingGeoLocation: 'Tracking Geo Location (Lat, Long)',
-  trackingImage: 'Tracking Image',
-  trackingVideo: 'Tracking Video',
-  checkInDateTime: 'Check In Date & Time',
-  checkOutDateTime: 'Check Out Date & Time',
-  visitDate: 'Visit Date',
-  nextVisitDate: 'Next Visit Date',
-  geoTagged: 'Geo Tagged',
-  imagePath: 'Image Path',
-  videoPath: 'Video Path',
+  subCategoryName: 'Sub Category',
+  lhCbo: 'LH-CBO',
+  geoLocation: 'Geo Location (Lat, Long)',
+  createdDate: 'Created Date',
 };
 
-const orderedColumns: Array<keyof ReportRecord> = [
-  'reportId',
-  'crpId',
-  'crpName',
-  'district',
-  'block',
-  'gramPanchayat',
-  'village',
-  'shgName',
-  'shgCode',
-  'memberName',
-  'memberCategory',
-  'activityName',
-  'seasonality',
-  'totalInvestment',
-  'annualIncomeBefore',
-  'annualIncomeAfter',
-  'progressStatus',
-  'assignedGeoLocation',
-  'trackingGeoLocation',
-  'trackingImage',
-  'trackingVideo',
-  'checkInDateTime',
-  'checkOutDateTime',
-  'visitDate',
-  'nextVisitDate',
-  'geoTagged',
-];
+const orderedColumns = Object.keys(columnLabels) as Array<keyof typeof columnLabels>;
 
-// Columns that stay pinned (frozen) while the sheet scrolls horizontally.
-// Order matters: this must match the left-most slice of `orderedColumns`.
-const frozenColumns: Partial<Record<keyof ReportRecord, boolean>> = {
-  reportId: true,
-  crpId: true,
-  crpName: true,
-};
+const PAGE_SIZE = 10;
 
-const getFrozenClassName = (column: keyof ReportRecord) =>
-  frozenColumns[column] ? `excel-sheet__col-${column}` : undefined;
-
-const excelLetters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
-
-type PreviewState =
-  | {
-    type: 'image' | 'video';
-    title: string;
-    src: string;
-  }
-  | null;
-
-const formatCurrency = (value: number) =>
-  new Intl.NumberFormat('en-IN', {
-    style: 'currency',
-    currency: 'INR',
-    maximumFractionDigits: 0,
-  }).format(value);
-
-const formatCellValue = (column: keyof ReportRecord, value: ReportRecord[keyof ReportRecord]) => {
-  if (typeof value === 'boolean') {
-    return value ? 'Yes' : 'No';
-  }
-
-  if (column === 'totalInvestment' || column === 'annualIncomeBefore' || column === 'annualIncomeAfter') {
-    return formatCurrency(Number(value));
-  }
-
-  return String(value);
-};
-
-const toDataUri = (svg: string) => `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
-
-const resolveMediaUrl = (path?: string) => {
-  if (!path) return '';
-  if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('data:')) {
-    return path;
-  }
-  const cleanPath = path.replace(/^\/+/, '');
-  return `https://trlm.pickitover.com/${cleanPath}`;
-};
-
-const buildImagePreview = (record: ReportRecord) => {
-  if (record.imagePath) {
-    return resolveMediaUrl(record.imagePath);
-  }
-  return toDataUri(`
-    <svg xmlns="http://www.w3.org/2000/svg" width="960" height="540" viewBox="0 0 960 540">
-      <defs>
-        <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stop-color="#d7f0e2"/>
-          <stop offset="100%" stop-color="#a8d5ba"/>
-        </linearGradient>
-      </defs>
-      <rect width="960" height="540" fill="url(#bg)"/>
-      <rect x="48" y="48" width="864" height="444" rx="26" fill="#ffffff" opacity="0.9"/>
-      <text x="90" y="130" font-family="Arial" font-size="34" font-weight="700" fill="#17324a">${record.memberName}</text>
-      <text x="90" y="178" font-family="Arial" font-size="22" fill="#4b6478">${record.activityName} - ${record.village}</text>
-      <text x="90" y="228" font-family="Arial" font-size="20" fill="#4b6478">Tracking Image Preview</text>
-      <text x="90" y="270" font-family="Arial" font-size="20" fill="#4b6478">CRP: ${record.crpName}</text>
-      <text x="90" y="312" font-family="Arial" font-size="20" fill="#4b6478">Visited: ${record.visitDate}</text>
-      <text x="90" y="354" font-family="Arial" font-size="20" fill="#4b6478">Location: ${record.trackingGeoLocation}</text>
-      <circle cx="770" cy="220" r="86" fill="#dff5e7"/>
-      <path d="M730 246l44-58 33 42 20-24 47 62z" fill="#2f855a"/>
-      <circle cx="742" cy="188" r="16" fill="#89c997"/>
-      <text x="90" y="430" font-family="Arial" font-size="18" fill="#60788c">Image placeholder</text>
-    </svg>
-  `);
-};
-
-const buildVideoPreview = (record: ReportRecord) => {
-  if (record.videoPath) {
-    return resolveMediaUrl(record.videoPath);
-  }
-  return toDataUri(`
-    <svg xmlns="http://www.w3.org/2000/svg" width="960" height="540" viewBox="0 0 960 540">
-      <defs>
-        <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stop-color="#17324a"/>
-          <stop offset="100%" stop-color="#2b5b80"/>
-        </linearGradient>
-      </defs>
-      <rect width="960" height="540" fill="url(#bg)"/>
-      <rect x="70" y="64" width="820" height="412" rx="28" fill="#0f2234" stroke="#6ea9d3" stroke-width="2"/>
-      <circle cx="480" cy="270" r="72" fill="#ffffff" opacity="0.92"/>
-      <path d="M455 228l68 42-68 42z" fill="#17324a"/>
-      <text x="90" y="118" font-family="Arial" font-size="32" font-weight="700" fill="#ffffff">${record.memberName}</text>
-      <text x="90" y="162" font-family="Arial" font-size="22" fill="#d6e7f4">Tracking Video Preview - ${record.activityName}</text>
-      <text x="90" y="430" font-family="Arial" font-size="18" fill="#d6e7f4">Visit: ${record.visitDate} | Next: ${record.nextVisitDate}</text>
-      <text x="90" y="458" font-family="Arial" font-size="18" fill="#d6e7f4">Geo: ${record.trackingGeoLocation}</text>
-    </svg>
-  `);
-};
-
-const exportCSV = (rowsToExport: ReportRecord[], fileName: string) => {
+const exportCSV = (rowsToExport: MemberReportRecord[], fileName: string) => {
   const headers = orderedColumns.map((column) => columnLabels[column]);
-  const rows = rowsToExport.map((record) =>
-    orderedColumns.map((column) => formatCellValue(column, record[column])),
-  );
+  const rows = rowsToExport.map((record) => orderedColumns.map((column) => String(record[column])));
 
   const csv = [headers, ...rows]
     .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(','))
@@ -300,11 +123,20 @@ const exportCSV = (rowsToExport: ReportRecord[], fileName: string) => {
 };
 
 const Reports: React.FC = () => {
-  const [preview, setPreview] = React.useState<PreviewState>(null);
+  const navigate = useNavigate();
   const [activeSectionKey, setActiveSectionKey] = React.useState<ReportSectionKey>('shg');
-  const [records, setRecords] = React.useState<ReportRecord[]>([]);
+  const [records, setRecords] = React.useState<MemberReportRecord[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState('');
+  const [page, setPage] = React.useState(1);
+  const [imagesFor, setImagesFor] = React.useState<MemberReportRecord | null>(null);
+  const [images, setImages] = React.useState<LivelihoodImage[]>([]);
+  const [imagesLoading, setImagesLoading] = React.useState(false);
+  const [imagesError, setImagesError] = React.useState('');
+  const [brokenImageIds, setBrokenImageIds] = React.useState<Set<number>>(new Set());
+  const [crpOptions, setCrpOptions] = React.useState<CRPOption[]>([]);
+  const [selectedCrpId, setSelectedCrpId] = React.useState('');
+  const [memberIdsByCrp, setMemberIdsByCrp] = React.useState<Map<string, Set<number>>>(new Map());
 
   const activeSection = reportSections.find((section) => section.key === activeSectionKey) ?? reportSections[0];
 
@@ -312,11 +144,34 @@ const Reports: React.FC = () => {
     try {
       setLoading(true);
       setError('');
-      const data = await getSHGTrackingReports();
-      const mapped = data.map((item, index) => mapTrackingToReportRecord(item, index));
-      setRecords(mapped);
+      const [data, crpList, trackingRecords] = await Promise.all([
+        getShgLivelihoods(),
+        crpService.getCRPList().catch(() => []),
+        getSHGTrackingReports().catch(() => []),
+      ]);
+
+      setRecords(data.map(mapLivelihoodToReportRecord));
+
+      const processedCrp = toCRPRecords(crpList);
+      const options = processedCrp
+        .map((record) => ({ id: getCRPid(record), name: record.name && record.name !== 'N/A' ? String(record.name) : '' }))
+        .filter((option) => option.id && option.name)
+        .sort((a, b) => a.name.localeCompare(b.name));
+      setCrpOptions(options);
+
+      // A CRP's jurisdiction isn't stored on the SHG member record itself — the only
+      // link is through SHG Tracking visits, which stamp CRPRegistrationId per member.
+      const byCrp = new Map<string, Set<number>>();
+      trackingRecords.forEach((t) => {
+        if (t.CRPRegistrationId === undefined || t.SHGMemberId === undefined) return;
+        const crpId = String(t.CRPRegistrationId);
+        const memberId = Number(t.SHGMemberId);
+        if (!byCrp.has(crpId)) byCrp.set(crpId, new Set());
+        byCrp.get(crpId)!.add(memberId);
+      });
+      setMemberIdsByCrp(byCrp);
     } catch (err) {
-      console.error('Failed to fetch tracking reports', err);
+      console.error('Failed to fetch SHG member reports', err);
       setError('Unable to load reports from server. Please try again.');
     } finally {
       setLoading(false);
@@ -327,20 +182,51 @@ const Reports: React.FC = () => {
     fetchReports();
   }, [fetchReports]);
 
-  // If section is SHG, use all fetched tracking records. Otherwise empty/filtered until backend adds other sections.
-  const activeRows = activeSectionKey === 'shg' ? records : [];
-  const completedCount = activeRows.filter((row) =>
-    row.progressStatus.toLowerCase().includes('complete') ||
-    row.progressStatus.toLowerCase().includes('checked') ||
-    row.progressStatus.toLowerCase().includes('verified')
-  ).length;
-  const geoTaggedCount = activeRows.filter((row) => row.geoTagged).length;
+  // If section is SHG, use all fetched member records. Otherwise empty until backend adds other sections.
+  const shgRows = activeSectionKey === 'shg' ? records : [];
+  const crpMemberIds = selectedCrpId ? memberIdsByCrp.get(selectedCrpId) : undefined;
+  const activeRows = crpMemberIds ? shgRows.filter((row) => crpMemberIds.has(row.memberId)) : shgRows;
+  const lhCboCount = activeRows.filter((row) => row.isLhCbo).length;
+  const geoTaggedCount = activeRows.filter((row) => row.hasGeo).length;
+
+  const totalPages = Math.max(1, Math.ceil(activeRows.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const pagedRows = activeRows.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  const rangeStart = activeRows.length === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1;
+  const rangeEnd = Math.min(currentPage * PAGE_SIZE, activeRows.length);
+
+  React.useEffect(() => {
+    setPage(1);
+  }, [activeSectionKey, records, selectedCrpId]);
+
+  const openMemberDashboard = (record: MemberReportRecord) => {
+    navigate(`/reports/shg-member/${record.memberId}`, {
+      state: { memberName: record.memberName, shgName: record.shgName },
+    });
+  };
+
+  const viewImages = async (record: MemberReportRecord) => {
+    setImagesFor(record);
+    setImages([]);
+    setImagesError('');
+    setBrokenImageIds(new Set());
+    setImagesLoading(true);
+    try {
+      const data = await getLivelihoodImages(record.livelihoodId);
+      setImages(data);
+    } catch (err) {
+      console.error('Failed to load livelihood images', err);
+      setImagesError('Unable to load images for this record.');
+    } finally {
+      setImagesLoading(false);
+    }
+  };
 
   return (
     <PageShell
       kicker="Reports"
-      title={`${activeSection.label} Status`}
-      subtitle="Live admin reports fetched from SHG Tracking API with CSV download."
+      title={`${activeSection.label} Register`}
+      subtitle="Live admin roster fetched from the SHG Livelihood API. Click a member's name to open their full profile dashboard."
     >
       {error && (
         <div className="page-card" style={{ marginBottom: '16px', background: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b', padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderRadius: '12px' }}>
@@ -358,21 +244,21 @@ const Reports: React.FC = () => {
 
       <section className="excel-report-hero page-card">
         <div>
-          <span className="excel-report-hero__kicker">Workbook Preview</span>
-          <h2>{activeSection.label} Register</h2>
+          <span className="excel-report-hero__kicker">SHG Member Roster</span>
+          <h2>{activeSection.label}</h2>
           <p>
-            Spreadsheet-style report view for admin review. Select a report section, scroll horizontally,
-            inspect live tracking records, and download the data as CSV.
+            Select a report section, inspect live SHG member records, click a name to drill into their
+            full profile, or download the roster as CSV.
           </p>
         </div>
         <div className="excel-report-hero__stats">
           <div>
-            <span>Total Records</span>
+            <span>Total Members</span>
             <strong>{activeRows.length}</strong>
           </div>
           <div>
-            <span>Completed / Verified</span>
-            <strong>{completedCount}</strong>
+            <span>LH-CBO Members</span>
+            <strong>{lhCboCount}</strong>
           </div>
           <div>
             <span>Geo Tagged</span>
@@ -400,6 +286,28 @@ const Reports: React.FC = () => {
         </div>
       </section>
 
+      <section className="page-card report-crp-filter">
+        <label htmlFor="report-crp-filter-select">Filter by CRP</label>
+        <select
+          id="report-crp-filter-select"
+          value={selectedCrpId}
+          onChange={(e) => setSelectedCrpId(e.target.value)}
+          disabled={loading}
+        >
+          <option value="">All CRPs ({records.length} members)</option>
+          {crpOptions.map((option) => (
+            <option key={option.id} value={option.id}>
+              {option.name} ({memberIdsByCrp.get(option.id)?.size ?? 0} members)
+            </option>
+          ))}
+        </select>
+        {selectedCrpId && (
+          <span className="report-crp-filter__hint">
+            Showing SHG members tracked under this CRP's field visits (via SHG Tracking records).
+          </span>
+        )}
+      </section>
+
       <section className="page-card excel-sheet-card">
         <div className="excel-sheet-card__bar">
           <div className="excel-sheet-card__tabs">
@@ -424,92 +332,50 @@ const Reports: React.FC = () => {
             <Loader />
           </div>
         ) : (
-          <div className="excel-sheet-wrap">
-            <table className="excel-sheet">
+          <div className="master-table-shell" style={{ border: 'none', borderRadius: 0, boxShadow: 'none' }}>
+            <table className="master-table">
               <thead>
-                <tr className="excel-sheet__letters">
-                  <th className="excel-sheet__row-index" />
-                  {orderedColumns.map((column, index) => (
-                    <th key={column} className={getFrozenClassName(column)}>
-                      {excelLetters[index] || `C${index + 1}`}
-                    </th>
-                  ))}
-                </tr>
-                <tr className="excel-sheet__headers">
-                  <th className="excel-sheet__row-index">1</th>
+                <tr>
                   {orderedColumns.map((column) => (
-                    <th key={column} className={getFrozenClassName(column)}>
-                      {columnLabels[column]}
-                    </th>
+                    <th key={column}>{columnLabels[column]}</th>
                   ))}
+                  <th>Images</th>
                 </tr>
               </thead>
               <tbody>
-                {activeRows.length === 0 ? (
+                {pagedRows.length === 0 ? (
                   <tr>
-                    <td colSpan={orderedColumns.length + 1} style={{ textAlign: 'center', padding: '40px', color: '#6b7280' }}>
+                    <td colSpan={orderedColumns.length + 1} className="master-empty">
                       No report records available for {activeSection.label}.
                     </td>
                   </tr>
                 ) : (
-                  activeRows.map((record, rowIndex) => (
-                    <tr key={record.reportId}>
-                      <td className="excel-sheet__row-index">{rowIndex + 2}</td>
-                      {orderedColumns.map((column) => (
-                        <td
-                          key={`${record.reportId}-${column}`}
-                          data-column={columnLabels[column]}
-                          className={getFrozenClassName(column)}
+                  pagedRows.map((record) => (
+                    <tr key={record.livelihoodId}>
+                      {orderedColumns.map((column) =>
+                        column === 'memberName' ? (
+                          <td key={column}>
+                            <button
+                              type="button"
+                              className="excel-preview-btn"
+                              onClick={() => openMemberDashboard(record)}
+                            >
+                              {record.memberName}
+                            </button>
+                          </td>
+                        ) : (
+                          <td key={column}>{record[column]}</td>
+                        ),
+                      )}
+                      <td>
+                        <button
+                          type="button"
+                          className="excel-preview-btn"
+                          onClick={() => viewImages(record)}
                         >
-                          {column === 'progressStatus' ? (
-                            <span className={`excel-chip excel-chip--${String(record[column]).toLowerCase().replace(/\s+/g, '-')}`}>
-                              {formatCellValue(column, record[column])}
-                            </span>
-                          ) : column === 'trackingImage' ? (
-                            record.trackingImage === 'uploaded' ? (
-                              <button
-                                className="excel-preview-btn"
-                                type="button"
-                                onClick={() =>
-                                  setPreview({
-                                    type: 'image',
-                                    title: `${record.memberName} - Tracking Image`,
-                                    src: buildImagePreview(record),
-                                  })
-                                }
-                              >
-                                Preview Image
-                              </button>
-                            ) : (
-                              <span className="excel-chip excel-chip--no">Not Uploaded</span>
-                            )
-                          ) : column === 'trackingVideo' ? (
-                            record.trackingVideo === 'uploaded' ? (
-                              <button
-                                className="excel-preview-btn"
-                                type="button"
-                                onClick={() =>
-                                  setPreview({
-                                    type: 'video',
-                                    title: `${record.memberName} - Tracking Video`,
-                                    src: buildVideoPreview(record),
-                                  })
-                                }
-                              >
-                                Preview Video
-                              </button>
-                            ) : (
-                              <span className="excel-chip excel-chip--no">Not Uploaded</span>
-                            )
-                          ) : column === 'geoTagged' ? (
-                            <span className={`excel-chip ${record.geoTagged ? 'excel-chip--yes' : 'excel-chip--no'}`}>
-                              {formatCellValue(column, record[column])}
-                            </span>
-                          ) : (
-                            formatCellValue(column, record[column])
-                          )}
-                        </td>
-                      ))}
+                          View Images
+                        </button>
+                      </td>
                     </tr>
                   ))
                 )}
@@ -517,26 +383,76 @@ const Reports: React.FC = () => {
             </table>
           </div>
         )}
-      </section>
 
-      {preview && (
-        <div className="excel-preview-modal" role="dialog" aria-modal="true">
-          <div className="excel-preview-modal__backdrop" onClick={() => setPreview(null)} />
-          <div className="excel-preview-modal__panel">
-            <div className="excel-preview-modal__header">
-              <div>
-                <span className="excel-preview-modal__kicker">{preview.type === 'image' ? 'Image Preview' : 'Video Preview'}</span>
-                <h3>{preview.title}</h3>
-              </div>
-              <button className="excel-preview-modal__close" type="button" onClick={() => setPreview(null)}>
-                Close
+        {!loading && activeRows.length > 0 && (
+          <div className="report-pagination">
+            <span className="report-pagination__info">
+              Showing {rangeStart}–{rangeEnd} of {activeRows.length}
+            </span>
+            <div className="report-pagination__controls">
+              <button
+                type="button"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+              >
+                Prev
+              </button>
+              <span className="report-pagination__page">
+                Page {currentPage} of {totalPages}
+              </span>
+              <button
+                type="button"
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+              >
+                Next
               </button>
             </div>
-            <div className="excel-preview-modal__body">
-              {preview.type === 'video' && !preview.src.startsWith('data:image') ? (
-                <video src={preview.src} controls autoPlay className="excel-preview-modal__media" />
+          </div>
+        )}
+      </section>
+
+      {imagesFor && (
+        <div className="report-images-modal-backdrop" onClick={() => setImagesFor(null)}>
+          <div className="report-images-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="report-images-modal__header">
+              <h3>Livelihood Images — {imagesFor.memberName}</h3>
+              <button type="button" onClick={() => setImagesFor(null)}>
+                <X size={18} />
+              </button>
+            </div>
+            <div className="report-images-modal__body">
+              {imagesLoading ? (
+                <Loader />
+              ) : imagesError ? (
+                <p className="master-empty">{imagesError}</p>
+              ) : images.length === 0 ? (
+                <p className="master-empty">No images uploaded for this livelihood record.</p>
               ) : (
-                <img src={preview.src} alt={preview.title} className="excel-preview-modal__media" />
+                <div className="report-images-grid">
+                  {images.map((img) => (
+                    <a
+                      key={img.ImageId}
+                      href={resolveMediaUrl(img.ImagePath)}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="report-images-grid__item"
+                    >
+                      {brokenImageIds.has(img.ImageId) ? (
+                        <div className="report-images-grid__broken">Image unavailable</div>
+                      ) : (
+                        <img
+                          src={resolveMediaUrl(img.ImagePath)}
+                          alt={`Livelihood ${img.LivelihoodId}`}
+                          onError={() =>
+                            setBrokenImageIds((prev) => new Set(prev).add(img.ImageId))
+                          }
+                        />
+                      )}
+                      <span>{img.UploadedDate ? new Date(img.UploadedDate).toLocaleDateString('en-IN') : '—'}</span>
+                    </a>
+                  ))}
+                </div>
               )}
             </div>
           </div>

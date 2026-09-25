@@ -33,9 +33,16 @@ export type SHGTrackingRecord = {
   [key: string]: unknown;
 };
 
+type SHGTrackingResponse = {
+  success?: boolean;
+  data?: SHGTrackingRecord[];
+};
+
 export const getSHGTrackingReports = async (): Promise<SHGTrackingRecord[]> => {
-  const response = await api.get<SHGTrackingRecord[]>('/shg-tracking/get-all');
-  return Array.isArray(response.data) ? response.data : [];
+  const response = await api.get<SHGTrackingRecord[] | SHGTrackingResponse>('/shg-tracking/get-all');
+  const payload = response.data;
+  if (Array.isArray(payload)) return payload;
+  return Array.isArray(payload?.data) ? payload.data : [];
 };
 
 export const reportService = {

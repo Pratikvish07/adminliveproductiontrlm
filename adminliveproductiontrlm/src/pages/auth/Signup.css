@@ -1,13 +1,13 @@
 :root {
   --signup-navy: #163957;
-  --signup-blue: #276a98;
+  --signup-blue: #10403f;
   --signup-gold: #e6bb61;
   --signup-surface: rgba(255, 255, 255, 0.94);
   --signup-panel: rgba(255, 255, 255, 0.78);
-  --signup-border: rgba(39, 106, 152, 0.14);
-  --signup-text: #1d3953;
+  --signup-border: rgba(16, 64, 63, 0.14);
+  --signup-text: #17262a;
   --signup-muted: #607589;
-  --signup-danger: #b52a35;
+  --signup-danger: #a5432f;
 }
 
 .signup-page {
@@ -18,7 +18,7 @@
   padding: 28px 16px;
   background:
     radial-gradient(circle at top left, rgba(230, 187, 97, 0.22), transparent 24%),
-    radial-gradient(circle at bottom right, rgba(39, 106, 152, 0.18), transparent 28%),
+    radial-gradient(circle at bottom right, rgba(16, 64, 63, 0.18), transparent 28%),
     linear-gradient(135deg, #f8f1df 0%, #dbeef9 50%, #eef6fb 100%);
 }
 
@@ -101,7 +101,7 @@
 .signup-divider {
   height: 1px;
   margin: 24px 0 22px;
-  background: linear-gradient(90deg, rgba(39, 106, 152, 0.18), rgba(39, 106, 152, 0.04));
+  background: linear-gradient(90deg, rgba(16, 64, 63, 0.18), rgba(16, 64, 63, 0.04));
 }
 
 .signup-form {
@@ -120,8 +120,8 @@
   padding: 13px 16px;
   border-radius: 16px;
   color: var(--signup-danger);
-  background: rgba(255, 236, 236, 0.92);
-  border: 1px solid rgba(204, 52, 64, 0.16);
+  background: rgba(244, 224, 218, 0.92);
+  border: 1px solid rgba(165, 67, 47, 0.16);
   font-size: 0.96rem;
 }
 
@@ -191,9 +191,9 @@
 .signup-field .input {
   width: 100%;
   padding: 13px 14px;
-  border: 1px solid rgba(118, 145, 170, 0.26);
+  border: 1px solid rgba(90, 107, 110, 0.26);
   border-radius: 14px;
-  background: rgba(248, 251, 253, 0.98);
+  background: rgba(237, 245, 240, 0.98);
   color: var(--signup-text);
   font-size: 0.98rem;
   box-sizing: border-box;
@@ -203,7 +203,7 @@
 .signup-select:focus,
 .signup-field .input:focus {
   outline: none;
-  border-color: rgba(39, 106, 152, 0.45);
+  border-color: rgba(16, 64, 63, 0.45);
   box-shadow: 0 0 0 4px rgba(198, 236, 255, 0.6);
   transform: translateY(-1px);
 }
@@ -246,7 +246,7 @@
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  border: 2px solid rgba(39, 106, 152, 0.18);
+  border: 2px solid rgba(16, 64, 63, 0.18);
   border-top-color: var(--signup-blue);
   animation: signup-spin 0.9s linear infinite;
 }
@@ -280,7 +280,7 @@
 .pw-bar {
   height: 6px;
   border-radius: 999px;
-  background: rgba(118, 145, 170, 0.18);
+  background: rgba(90, 107, 110, 0.18);
 }
 
 .pw-bar--weak {

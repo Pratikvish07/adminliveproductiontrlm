@@ -3,78 +3,9 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import Loader from '../../components/common/Loader';
 import { crpService, type SHGMemberRecord } from '../../services/crpService';
 import './CRPList.css';
+import '../reports/Reports.css';
 
-const PREFERRED_MEMBER_COLUMNS = [
-  'name',
-  'memberName',
-  'shgName',
-  'mobile',
-  'mobileNo',
-  'phone',
-  'village',
-  'villageName',
-  'status',
-];
-
-const toTitleCase = (value: string): string =>
-  value
-    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
-    .replace(/[_-]+/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .replace(/\b\w/g, (char) => char.toUpperCase());
-
-const normalizeValue = (value: unknown): string => {
-  if (value === null || value === undefined || value === '') {
-    return '-';
-  }
-
-  if (typeof value === 'object') {
-    return JSON.stringify(value);
-  }
-
-  return String(value);
-};
-
-const getCaseInsensitiveValue = (record: SHGMemberRecord, key: string): unknown => {
-  const normalizedKey = key.toLowerCase();
-  const match = Object.keys(record).find((candidate) => candidate.toLowerCase() === normalizedKey);
-  return match ? record[match] : undefined;
-};
-
-const buildColumns = (records: SHGMemberRecord[]): string[] => {
-  const keys = Array.from(
-    new Set(
-      records.flatMap((record) => Object.keys(record)),
-    ),
-  );
-
-  const prioritized = PREFERRED_MEMBER_COLUMNS.filter((column) =>
-    keys.some((key) => key.toLowerCase() === column.toLowerCase()),
-  );
-
-  const remaining = keys.filter(
-    (key) => !prioritized.some((column) => column.toLowerCase() === key.toLowerCase()),
-  );
-
-  return [...prioritized, ...remaining];
-};
-
-const getPrimaryMemberText = (record: SHGMemberRecord): string =>
-  normalizeValue(
-    getCaseInsensitiveValue(record, 'name')
-    ?? getCaseInsensitiveValue(record, 'memberName')
-    ?? getCaseInsensitiveValue(record, 'MemberName')
-    ?? getCaseInsensitiveValue(record, 'shgMemberName'),
-  );
-
-const getSecondaryMemberText = (record: SHGMemberRecord): string =>
-  normalizeValue(
-    getCaseInsensitiveValue(record, 'shgName')
-    ?? getCaseInsensitiveValue(record, 'groupName')
-    ?? getCaseInsensitiveValue(record, 'villageName')
-    ?? getCaseInsensitiveValue(record, 'village'),
-  );
+const PAGE_SIZE = 10;
 
 const SHGMemberList: React.FC = () => {
   const navigate = useNavigate();
@@ -85,6 +16,7 @@ const SHGMemberList: React.FC = () => {
   const [members, setMembers] = React.useState<SHGMemberRecord[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState('');
+  const [page, setPage] = React.useState(1);
 
   React.useEffect(() => {
     let isMounted = true;
@@ -125,8 +57,14 @@ const SHGMemberList: React.FC = () => {
     };
   }, [villageId]);
 
-  const columns = React.useMemo(() => buildColumns(members), [members]);
   const totalMembers = members.length;
+  const totalPages = Math.max(1, Math.ceil(totalMembers / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const pagedMembers = members.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
+  React.useEffect(() => {
+    setPage(1);
+  }, [members]);
 
   if (loading) {
     return <Loader />;
@@ -139,7 +77,7 @@ const SHGMemberList: React.FC = () => {
           <p className="crp-kicker">SHG Member Directory</p>
           <h1 className="crp-title">Village SHG members for CRP {crpId || '-'}</h1>
           <p className="crp-subtitle">
-            Reviewing member records linked to village {villageId || '-'} using the authenticated SHG upload API.
+            Members registered under village {villageId || '-'}, from the master SHG member API.
           </p>
           <div className="crp-hero__status">
             <span>CRP ID: {crpId || '-'}</span>
@@ -159,17 +97,17 @@ const SHGMemberList: React.FC = () => {
           <div className="crp-panel__head">
             <div>
               <span className="crp-panel__eyebrow">Navigation</span>
-              <h2>Return to CRP list</h2>
-              <p>Use the back button below to jump to the CRP overview.</p>
+              <h2>Return to Report</h2>
+              <p>Use the back button below to jump to the CRP report.</p>
             </div>
           </div>
 
           <button
             type="button"
             className="crp-link-button crp-link-button--back"
-            onClick={() => navigate('/crp/list')}
+            onClick={() => navigate('/master/shg-livelihood')}
           >
-            Back to CRP list
+            Back to Report
           </button>
         </article>
 
@@ -183,10 +121,10 @@ const SHGMemberList: React.FC = () => {
           </div>
 
           <div className="crp-pair-list">
-            {members.slice(0, 4).map((member, index) => (
-              <div className="crp-pair-list__item" key={`${getPrimaryMemberText(member)}-${index}`}>
-                <span>{getPrimaryMemberText(member)}</span>
-                <strong>{getSecondaryMemberText(member)}</strong>
+            {members.slice(0, 4).map((member) => (
+              <div className="crp-pair-list__item" key={member.MemberId}>
+                <span>{member.MemberName}</span>
+                <strong>{member.SHGName}</strong>
               </div>
             ))}
             {members.length === 0 && <div className="crp-empty">No SHG members found for this village.</div>}
@@ -198,7 +136,7 @@ const SHGMemberList: React.FC = () => {
             <div>
               <span className="crp-panel__eyebrow">Members</span>
               <h2>SHG member records</h2>
-              <p>The table adapts to whichever fields the API returns.</p>
+              <p>Member, SHG code/name and mobile number for this village.</p>
             </div>
           </div>
 
@@ -211,23 +149,42 @@ const SHGMemberList: React.FC = () => {
               <table className="gov-table">
                 <thead>
                   <tr>
-                    {columns.map((column) => (
-                      <th key={column}>{toTitleCase(column)}</th>
-                    ))}
+                    <th>Member ID</th>
+                    <th>Member Name</th>
+                    <th>SHG Code</th>
+                    <th>SHG Name</th>
+                    <th>Mobile No</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {members.map((member, index) => (
-                    <tr key={`${getPrimaryMemberText(member)}-${index}`}>
-                      {columns.map((column) => (
-                        <td key={`${index}-${column}`}>
-                          {normalizeValue(getCaseInsensitiveValue(member, column))}
-                        </td>
-                      ))}
+                  {pagedMembers.map((member) => (
+                    <tr key={member.MemberId}>
+                      <td>{member.MemberId}</td>
+                      <td>{member.MemberName}</td>
+                      <td>{member.SHGCode}</td>
+                      <td>{member.SHGName}</td>
+                      <td>{member.MobileNo}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
+            </div>
+          )}
+
+          {!error && totalMembers > 0 && (
+            <div className="report-pagination">
+              <span className="report-pagination__info">
+                Showing {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, totalMembers)} of {totalMembers}
+              </span>
+              <div className="report-pagination__controls">
+                <button type="button" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={currentPage === 1}>
+                  Prev
+                </button>
+                <span className="report-pagination__page">Page {currentPage} of {totalPages}</span>
+                <button type="button" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>
+                  Next
+                </button>
+              </div>
             </div>
           )}
         </article>

@@ -257,8 +257,8 @@ const openCreateModal = () => {
             {canManage && activities.length > 0 && (
                 <div className="master-table-shell" style={{ padding: 18, marginBottom: 18 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-                        <Calculator size={16} color="#276a98" />
-                        <strong style={{ color: '#17324a' }}>Loan Projection</strong>
+                        <Calculator size={16} color="#10403f" />
+                        <strong style={{ color: '#0b2d2c' }}>Loan Projection</strong>
                     </div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'flex-end' }}>
                         <div className="act-form-group" style={{ minWidth: 200 }}>
@@ -321,7 +321,7 @@ const openCreateModal = () => {
                                     <div style={{ fontSize: '0.72rem', color: '#5f7386', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                                         {cell.label}
                                     </div>
-                                    <div style={{ color: '#17324a', fontWeight: 700, marginTop: 2 }}>{cell.value}</div>
+                                    <div style={{ color: '#0b2d2c', fontWeight: 700, marginTop: 2 }}>{cell.value}</div>
                                 </div>
                             ))}
                         </div>

@@ -68,6 +68,13 @@ export interface Production {
   ProductionName: string;
 }
 
+export interface LivelihoodImage {
+  ImageId: number;
+  LivelihoodId: number;
+  ImagePath: string;
+  UploadedDate: string;
+}
+
 export interface CrpType {
   CRPTypeId: number;
   CRPTypeName: string;

@@ -37,9 +37,9 @@
   font-family: 'DM Sans', sans-serif;
   font-weight: 400;
   background:
-    radial-gradient(circle at 20% 10%, rgba(39, 106, 152, 0.15) 0%, transparent 50%),
+    radial-gradient(circle at 20% 10%, rgba(16, 64, 63, 0.15) 0%, transparent 50%),
     radial-gradient(circle at 80% 90%, var(--gov-accent-gold) 0%, transparent 45%),
-    linear-gradient(135deg, var(--gov-primary-strong) 0%, #143b61 50%, #1f6997 100%);
+    linear-gradient(135deg, var(--gov-primary-strong) 0%, #143b61 50%, #2f6690 100%);
   position: relative;
   overflow: hidden;
   animation: bgShift 12s ease-in-out infinite alternate;
@@ -107,7 +107,7 @@
    ============================================================ */
 .login-visual {
   background:
-    linear-gradient(135deg, rgba(13, 43, 71, 0.98), rgba(39, 106, 152, 0.95)),
+    linear-gradient(135deg, rgba(13, 43, 71, 0.98), rgba(16, 64, 63, 0.95)),
     /* Texture from dashboard */
     repeating-linear-gradient(
       -45deg,
@@ -152,7 +152,7 @@
   gap: 16px;
   padding: 16px 22px 16px 16px;
   border-radius: 999px;
-  background: rgba(20, 59, 97, 0.6);
+  background: rgba(11, 45, 44, 0.6);
   border: 1px solid rgba(255, 255, 255, 0.2);
   box-shadow:
     0 16px 32px rgba(0, 0, 0, 0.3),
@@ -210,7 +210,7 @@
 .visual-stat {
   padding: 20px 16px;
   border-radius: 20px;
-  background: rgba(20, 59, 97, 0.5);
+  background: rgba(11, 45, 44, 0.5);
   border: 1px solid rgba(255, 255, 255, 0.15);
   box-shadow: 0 12px 28px rgba(0, 0, 0, 0.25);
   transition: all 0.3s ease;
@@ -361,7 +361,7 @@
 .panel-title {
   font-family: 'Playfair Display', serif;
   font-size: clamp(24px, 3vw, 32px);
-  background: linear-gradient(135deg, var(--gov-text), #17324a);
+  background: linear-gradient(135deg, var(--gov-text), #0b2d2c);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -394,7 +394,7 @@
   padding: 12px 16px;
   border-radius: 12px;
   border: 1px solid var(--gov-danger);
-  background: rgba(196, 69, 54, 0.1);
+  background: rgba(165, 67, 47, 0.1);
   color: var(--gov-danger);
   font-size: 14px;
   font-weight: 500;
@@ -426,7 +426,7 @@
   min-height: 60px;
   padding: 18px 20px;
   border-radius: 18px;
-  border: 2px solid rgba(20, 59, 97, 0.2);
+  border: 2px solid rgba(11, 45, 44, 0.2);
   background: rgba(255, 255, 255, 0.9);
   font-family: inherit;
   font-size: 16px;
@@ -524,16 +524,16 @@
   overflow: hidden !important;
   transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1) !important;
   box-shadow:
-    0 16px 40px rgba(20, 59, 97, 0.3),
+    0 16px 40px rgba(11, 45, 44, 0.3),
     0 4px 12px rgba(0, 0, 0, 0.2),
     inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
 
 .login-btn.btn-primary:hover:not(:disabled) {
-  background: linear-gradient(135deg, var(--gov-primary-soft), #276a98) !important;
+  background: linear-gradient(135deg, var(--gov-primary-soft), #10403f) !important;
   transform: translateY(-4px) scale(1.02) !important;
   box-shadow:
-    0 24px 60px rgba(20, 59, 97, 0.45),
+    0 24px 60px rgba(11, 45, 44, 0.45),
     0 8px 24px rgba(0, 0, 0, 0.3);
 }
 
@@ -591,7 +591,7 @@
   z-index: 2;
   text-align: center;
   padding-top: 20px;
-  border-top: 1px solid rgba(20, 59, 97, 0.2);
+  border-top: 1px solid rgba(11, 45, 44, 0.2);
 }
 
 .footer p {

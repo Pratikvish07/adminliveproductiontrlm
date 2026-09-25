@@ -1,9 +1,9 @@
 @import 'styles/gov-portal.css';
 
 :root {
-  color: #17324a;
-  background: #eef3f8;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: #17262a;
+  background: #f6f4ee;
+  font-family: 'Inter', sans-serif;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -18,10 +18,13 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  background:
-    radial-gradient(circle at top, rgba(39, 106, 152, 0.12), transparent 28%),
-    linear-gradient(180deg, #f7fafc 0%, #edf4fb 100%);
-  color: #17324a;
+  background: #f6f4ee;
+  color: #17262a;
+  font-size: 15px;
+}
+
+h1, h2, h3, h4 {
+  font-family: 'Fraunces', serif;
 }
 
 #root {
