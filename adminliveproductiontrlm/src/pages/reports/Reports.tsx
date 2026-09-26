@@ -1,463 +1,267 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { X } from 'lucide-react';
+import { Download, ExternalLink, MapPin, RefreshCw, Search } from 'lucide-react';
 import PageShell from '../../components/common/PageShell';
 import Loader from '../../components/common/Loader';
-import { getShgLivelihoods, getLivelihoodImages } from '../../services/masterService';
-import { crpService } from '../../services/crpService';
-import { getSHGTrackingReports } from '../../services/reportService';
-import { getCRPid, toCRPRecords } from '../crp/crpUtils';
-import type { ShgLivelihood, LivelihoodImage } from '../../types/master.types';
+import { useAuth } from '../../context/AuthContext';
+import {
+  getSHGTrackingControllerReport,
+  type SHGTrackingReportRecord,
+} from '../../services/masterService';
 import './Reports.css';
-import '../master/MasterData.css';
 
-type CRPOption = { id: string; name: string };
+const PAGE_SIZE = 25;
+const dash = '—';
 
-const resolveMediaUrl = (path: string) => {
-  if (path.startsWith('http://') || path.startsWith('https://')) return path;
-  return `https://trlm.pickitover.com/${path.replace(/^\/+/, '')}`;
-};
-
-type MemberReportRecord = {
-  memberId: number;
-  livelihoodId: number;
-  memberName: string;
-  shgName: string;
-  activityName: string;
-  subCategoryName: string;
-  lhCbo: string;
-  geoLocation: string;
-  createdDate: string;
-  hasGeo: boolean;
-  isLhCbo: boolean;
-};
-
-type ReportSectionKey = 'shg' | 'producerGroup' | 'nonProducerGroup' | 'lhCbo' | 'fpc' | 'chc';
-
-type ReportSection = {
-  key: ReportSectionKey;
-  label: string;
-  csvName: string;
-};
-
-const reportSections: ReportSection[] = [
-  {
-    key: 'shg',
-    label: 'SHG Members',
-    csvName: 'trlm-shg-members-report.csv',
-  },
-  {
-    key: 'producerGroup',
-    label: 'Producer Group',
-    csvName: 'trlm-producer-group-report.csv',
-  },
-  {
-    key: 'nonProducerGroup',
-    label: 'Non Producer Group',
-    csvName: 'trlm-non-producer-group-report.csv',
-  },
-  {
-    key: 'lhCbo',
-    label: 'Integrated Farming Cluster (IFC)',
-    csvName: 'trlm-integrated-farming-cluster-ifc-report.csv',
-  },
-  {
-    key: 'fpc',
-    label: 'FPC',
-    csvName: 'trlm-fpc-report.csv',
-  },
-  {
-    key: 'chc',
-    label: 'CHC',
-    csvName: 'trlm-chc-report.csv',
-  },
+const fields: Array<{ key: keyof SHGTrackingReportRecord; label: string }> = [
+  { key: 'memberId', label: 'Member ID' },
+  { key: 'districtId', label: 'District ID' },
+  { key: 'districtName', label: 'District' },
+  { key: 'blockId', label: 'Block ID' },
+  { key: 'blockName', label: 'Block' },
+  { key: 'gpId', label: 'Gram Panchayat ID' },
+  { key: 'gpName', label: 'Gram Panchayat' },
+  { key: 'villageId', label: 'Village ID' },
+  { key: 'villageName', label: 'Village' },
+  { key: 'shgCode', label: 'SHG Code' },
+  { key: 'shgName', label: 'SHG Name' },
+  { key: 'memberCode', label: 'Member Code' },
+  { key: 'memberName', label: 'Member Name' },
+  { key: 'activityId', label: 'Activity ID' },
+  { key: 'activityName', label: 'Activity' },
+  { key: 'subCategoryId', label: 'Subcategory ID' },
+  { key: 'subActivityName', label: 'Subactivity' },
+  { key: 'investmentAmount', label: 'Investment' },
+  { key: 'incomeBeforeSupport', label: 'Income before support' },
+  { key: 'futureProjection', label: 'Future income projection' },
+  { key: 'latitude', label: 'Latitude' },
+  { key: 'longitude', label: 'Longitude' },
+  { key: 'activityImagePath', label: 'Activity image path' },
+  { key: 'videoPath', label: 'Video path' },
+  { key: 'geoStatus', label: 'Geo status' },
+  { key: 'imageStatus', label: 'Image status' },
+  { key: 'videoStatus', label: 'Video status' },
+  { key: 'remarks', label: 'Remarks' },
+  { key: 'trackingDate', label: 'Tracking date' },
+  { key: 'trainingStatus', label: 'Training status' },
+  { key: 'financialSupportStatus', label: 'Financial support status' },
 ];
 
-const mapLivelihoodToReportRecord = (item: ShgLivelihood): MemberReportRecord => {
-  const hasGeo = Boolean(item.Latitude && item.Longitude);
+const display = (value: unknown) => value === null || value === undefined || value === '' ? dash : String(value);
+const currency = (value: number | null) => value == null
+  ? dash
+  : new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(value);
+const formatDate = (value: string | null) => value ? new Date(value).toLocaleString('en-IN') : dash;
+const mediaUrl = (path: string) => /^https?:\/\//i.test(path)
+  ? path
+  : `https://trlm.pickitover.com/${path.replace(/^\/+/, '')}`;
+const mapsUrl = (row: SHGTrackingReportRecord) => `https://www.google.com/maps?q=${row.latitude},${row.longitude}`;
 
-  return {
-    memberId: item.MemberId,
-    livelihoodId: item.LivelihoodId,
-    memberName: item.MemberName || `Member #${item.MemberId}`,
-    shgName: item.SHGName || '—',
-    activityName: item.ActivityName || '—',
-    subCategoryName: item.SubCategoryName || '—',
-    lhCbo: item.IsLH_CBO ? (item.LH_CBO_Name || 'Yes') : 'No',
-    geoLocation: hasGeo ? `${item.Latitude}, ${item.Longitude}` : '—',
-    createdDate: item.CreatedDate ? new Date(item.CreatedDate).toLocaleDateString('en-IN') : '—',
-    hasGeo,
-    isLhCbo: item.IsLH_CBO,
-  };
-};
-
-const columnLabels: Record<keyof Omit<MemberReportRecord, 'memberId' | 'livelihoodId' | 'hasGeo' | 'isLhCbo'>, string> = {
-  memberName: 'Member Name',
-  shgName: 'SHG Name',
-  activityName: 'Activity',
-  subCategoryName: 'Sub Category',
-  lhCbo: 'LH-CBO',
-  geoLocation: 'Geo Location (Lat, Long)',
-  createdDate: 'Created Date',
-};
-
-const orderedColumns = Object.keys(columnLabels) as Array<keyof typeof columnLabels>;
-
-const PAGE_SIZE = 10;
-
-const exportCSV = (rowsToExport: MemberReportRecord[], fileName: string) => {
-  const headers = orderedColumns.map((column) => columnLabels[column]);
-  const rows = rowsToExport.map((record) => orderedColumns.map((column) => String(record[column])));
-
-  const csv = [headers, ...rows]
-    .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(','))
-    .join('\n');
-
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
+const downloadCsv = (records: SHGTrackingReportRecord[]) => {
+  const csvRows = [
+    fields.map((field) => field.label),
+    ...records.map((record) => fields.map(({ key }) => display(record[key]))),
+  ];
+  const csv = csvRows.map((row) => row.map((value) => `"${value.replace(/"/g, '""')}"`).join(',')).join('\n');
+  const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
   const anchor = document.createElement('a');
   anchor.href = url;
-  anchor.download = fileName;
+  anchor.download = 'shg-tracking-report.csv';
   anchor.click();
   URL.revokeObjectURL(url);
 };
 
+const FieldGroup: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
+  <section className="tracking-report__group">
+    <h3>{title}</h3>
+    <div className="tracking-report__fields">{children}</div>
+  </section>
+);
+
+const DataField: React.FC<{ label: string; value: React.ReactNode; wide?: boolean }> = ({ label, value, wide }) => (
+  <div className={`tracking-report__field${wide ? ' tracking-report__field--wide' : ''}`}>
+    <span>{label}</span>
+    <strong>{value ?? dash}</strong>
+  </div>
+);
+
+const Status: React.FC<{ label: string; value: string }> = ({ label, value }) => (
+  <span className={`tracking-report__status tracking-report__status--${value.toLowerCase().includes('upload') || value.toLowerCase().includes('complete') ? 'good' : 'neutral'}`}>
+    <span>{label}</span><strong>{value || dash}</strong>
+  </span>
+);
+
 const Reports: React.FC = () => {
-  const navigate = useNavigate();
-  const [activeSectionKey, setActiveSectionKey] = React.useState<ReportSectionKey>('shg');
-  const [records, setRecords] = React.useState<MemberReportRecord[]>([]);
+  const { user } = useAuth();
+  const staffUserId = user?.livelihoodTrackerId ?? user?.staffId ?? user?.id;
+  const [memberIdInput, setMemberIdInput] = React.useState('');
+  const [memberIdFilter, setMemberIdFilter] = React.useState('');
+  const [records, setRecords] = React.useState<SHGTrackingReportRecord[]>([]);
+  const [page, setPage] = React.useState(1);
+  const [totalRecords, setTotalRecords] = React.useState(0);
+  const [hasNextPage, setHasNextPage] = React.useState(false);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState('');
-  const [page, setPage] = React.useState(1);
-  const [imagesFor, setImagesFor] = React.useState<MemberReportRecord | null>(null);
-  const [images, setImages] = React.useState<LivelihoodImage[]>([]);
-  const [imagesLoading, setImagesLoading] = React.useState(false);
-  const [imagesError, setImagesError] = React.useState('');
-  const [brokenImageIds, setBrokenImageIds] = React.useState<Set<number>>(new Set());
-  const [crpOptions, setCrpOptions] = React.useState<CRPOption[]>([]);
-  const [selectedCrpId, setSelectedCrpId] = React.useState('');
-  const [memberIdsByCrp, setMemberIdsByCrp] = React.useState<Map<string, Set<number>>>(new Map());
+  const [refreshVersion, setRefreshVersion] = React.useState(0);
 
-  const activeSection = reportSections.find((section) => section.key === activeSectionKey) ?? reportSections[0];
+  React.useEffect(() => {
+    let active = true;
+    const load = async () => {
+      if (!staffUserId) {
+        setError('Your staff account ID is unavailable. Sign in again and retry.');
+        setLoading(false);
+        return;
+      }
 
-  const fetchReports = React.useCallback(async () => {
-    try {
       setLoading(true);
       setError('');
-      const [data, crpList, trackingRecords] = await Promise.all([
-        getShgLivelihoods(),
-        crpService.getCRPList().catch(() => []),
-        getSHGTrackingReports().catch(() => []),
-      ]);
+      try {
+        const result = await getSHGTrackingControllerReport({
+          staffUserId,
+          memberId: memberIdFilter || undefined,
+          pageNumber: page,
+          pageSize: PAGE_SIZE,
+        });
+        if (active) {
+          setRecords(result.records ?? []);
+          setTotalRecords(result.totalRecords ?? 0);
+          setHasNextPage((result.totalPages ?? 0) > page || (result.records?.length ?? 0) === PAGE_SIZE);
+        }
+      } catch (cause) {
+        console.error('Failed to load SHG tracking report', cause);
+        if (active) setError('Unable to load SHG tracking records. Please retry.');
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
 
-      setRecords(data.map(mapLivelihoodToReportRecord));
+    void load();
+    return () => { active = false; };
+  }, [staffUserId, memberIdFilter, page, refreshVersion]);
 
-      const processedCrp = toCRPRecords(crpList);
-      const options = processedCrp
-        .map((record) => ({ id: getCRPid(record), name: record.name && record.name !== 'N/A' ? String(record.name) : '' }))
-        .filter((option) => option.id && option.name)
-        .sort((a, b) => a.name.localeCompare(b.name));
-      setCrpOptions(options);
-
-      // A CRP's jurisdiction isn't stored on the SHG member record itself — the only
-      // link is through SHG Tracking visits, which stamp CRPRegistrationId per member.
-      const byCrp = new Map<string, Set<number>>();
-      trackingRecords.forEach((t) => {
-        if (t.CRPRegistrationId === undefined || t.SHGMemberId === undefined) return;
-        const crpId = String(t.CRPRegistrationId);
-        const memberId = Number(t.SHGMemberId);
-        if (!byCrp.has(crpId)) byCrp.set(crpId, new Set());
-        byCrp.get(crpId)!.add(memberId);
-      });
-      setMemberIdsByCrp(byCrp);
-    } catch (err) {
-      console.error('Failed to fetch SHG member reports', err);
-      setError('Unable to load reports from server. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  React.useEffect(() => {
-    fetchReports();
-  }, [fetchReports]);
-
-  // If section is SHG, use all fetched member records. Otherwise empty until backend adds other sections.
-  const shgRows = activeSectionKey === 'shg' ? records : [];
-  const crpMemberIds = selectedCrpId ? memberIdsByCrp.get(selectedCrpId) : undefined;
-  const activeRows = crpMemberIds ? shgRows.filter((row) => crpMemberIds.has(row.memberId)) : shgRows;
-  const lhCboCount = activeRows.filter((row) => row.isLhCbo).length;
-  const geoTaggedCount = activeRows.filter((row) => row.hasGeo).length;
-
-  const totalPages = Math.max(1, Math.ceil(activeRows.length / PAGE_SIZE));
-  const currentPage = Math.min(page, totalPages);
-  const pagedRows = activeRows.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
-  const rangeStart = activeRows.length === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1;
-  const rangeEnd = Math.min(currentPage * PAGE_SIZE, activeRows.length);
-
-  React.useEffect(() => {
+  const applyMemberFilter = (event: React.FormEvent) => {
+    event.preventDefault();
     setPage(1);
-  }, [activeSectionKey, records, selectedCrpId]);
-
-  const openMemberDashboard = (record: MemberReportRecord) => {
-    navigate(`/reports/shg-member/${record.memberId}`, {
-      state: { memberName: record.memberName, shgName: record.shgName },
-    });
+    setMemberIdFilter(memberIdInput.trim());
   };
 
-  const viewImages = async (record: MemberReportRecord) => {
-    setImagesFor(record);
-    setImages([]);
-    setImagesError('');
-    setBrokenImageIds(new Set());
-    setImagesLoading(true);
-    try {
-      const data = await getLivelihoodImages(record.livelihoodId);
-      setImages(data);
-    } catch (err) {
-      console.error('Failed to load livelihood images', err);
-      setImagesError('Unable to load images for this record.');
-    } finally {
-      setImagesLoading(false);
-    }
-  };
+  const pageStart = records.length ? (page - 1) * PAGE_SIZE + 1 : 0;
+  const pageEnd = (page - 1) * PAGE_SIZE + records.length;
+  const totalLabel = totalRecords || (hasNextPage ? `${pageEnd}+` : pageEnd);
 
   return (
-    <PageShell
-      kicker="Reports"
-      title={`${activeSection.label} Register`}
-      subtitle="Live admin roster fetched from the SHG Livelihood API. Click a member's name to open their full profile dashboard."
-    >
-      {error && (
-        <div className="page-card" style={{ marginBottom: '16px', background: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b', padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderRadius: '12px' }}>
-          <span>{error}</span>
-          <button
-            type="button"
-            className="excel-report-btn"
-            style={{ background: '#b91c1c', color: '#fff', border: 'none', padding: '6px 14px', borderRadius: '6px', cursor: 'pointer' }}
-            onClick={fetchReports}
-          >
-            Retry
+    <PageShell kicker="Reports" title="SHG Tracking Report" subtitle="Member, livelihood, support, visit, location, and media details from the tracking report API.">
+      <div className="tracking-report">
+        <form className="tracking-report__toolbar" onSubmit={applyMemberFilter}>
+          <label htmlFor="tracking-member-filter">Member ID</label>
+          <div className="tracking-report__search">
+            <Search size={16} aria-hidden="true" />
+            <input
+              id="tracking-member-filter"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              value={memberIdInput}
+              onChange={(event) => setMemberIdInput(event.target.value)}
+              placeholder="Search by member ID"
+            />
+          </div>
+          <button className="tracking-report__button tracking-report__button--primary" type="submit">
+            <Search size={16} /> Search
           </button>
-        </div>
-      )}
-
-      <section className="excel-report-hero page-card">
-        <div>
-          <span className="excel-report-hero__kicker">SHG Member Roster</span>
-          <h2>{activeSection.label}</h2>
-          <p>
-            Select a report section, inspect live SHG member records, click a name to drill into their
-            full profile, or download the roster as CSV.
-          </p>
-        </div>
-        <div className="excel-report-hero__stats">
-          <div>
-            <span>Total Members</span>
-            <strong>{activeRows.length}</strong>
-          </div>
-          <div>
-            <span>LH-CBO Members</span>
-            <strong>{lhCboCount}</strong>
-          </div>
-          <div>
-            <span>Geo Tagged</span>
-            <strong>{geoTaggedCount}</strong>
-          </div>
-        </div>
-        <div className="excel-report-hero__actions">
-          <button
-            className="excel-report-btn excel-report-btn--secondary"
-            type="button"
-            onClick={fetchReports}
-            disabled={loading}
-            style={{ marginRight: '8px' }}
-          >
-            {loading ? 'Refreshing...' : 'Refresh'}
+          <button className="tracking-report__icon-button" type="button" title="Refresh report" aria-label="Refresh report" onClick={() => setRefreshVersion((value) => value + 1)} disabled={loading}>
+            <RefreshCw size={17} className={loading ? 'tracking-report__spinning' : ''} />
           </button>
-          <button
-            className="excel-report-btn excel-report-btn--primary"
-            type="button"
-            onClick={() => exportCSV(activeRows, activeSection.csvName)}
-            disabled={activeRows.length === 0}
-          >
-            Download CSV
+          <button className="tracking-report__button" type="button" onClick={() => downloadCsv(records)} disabled={!records.length}>
+            <Download size={16} /> Export page
           </button>
-        </div>
-      </section>
+          <span className="tracking-report__count">{totalLabel} records</span>
+        </form>
 
-      <section className="page-card report-crp-filter">
-        <label htmlFor="report-crp-filter-select">Filter by CRP</label>
-        <select
-          id="report-crp-filter-select"
-          value={selectedCrpId}
-          onChange={(e) => setSelectedCrpId(e.target.value)}
-          disabled={loading}
-        >
-          <option value="">All CRPs ({records.length} members)</option>
-          {crpOptions.map((option) => (
-            <option key={option.id} value={option.id}>
-              {option.name} ({memberIdsByCrp.get(option.id)?.size ?? 0} members)
-            </option>
-          ))}
-        </select>
-        {selectedCrpId && (
-          <span className="report-crp-filter__hint">
-            Showing SHG members tracked under this CRP's field visits (via SHG Tracking records).
-          </span>
-        )}
-      </section>
+        {error && <div className="tracking-report__error" role="alert">{error}</div>}
+        {loading && records.length > 0 && <div className="tracking-report__progress" role="status">Updating report…</div>}
 
-      <section className="page-card excel-sheet-card">
-        <div className="excel-sheet-card__bar">
-          <div className="excel-sheet-card__tabs">
-            {reportSections.map((section) => (
-              <button
-                key={section.key}
-                className={section.key === activeSectionKey ? 'is-active' : undefined}
-                type="button"
-                onClick={() => setActiveSectionKey(section.key)}
-              >
-                {section.label}
-              </button>
-            ))}
-          </div>
-          <div className="excel-sheet-card__meta">
-            {activeSection.label} ({activeRows.length} records)
-          </div>
-        </div>
-
-        {loading ? (
-          <div style={{ padding: '48px', display: 'flex', justifyContent: 'center' }}>
-            <Loader />
-          </div>
+        {loading && records.length === 0 ? (
+          <div className="tracking-report__loading"><Loader /></div>
+        ) : records.length === 0 ? (
+          <div className="tracking-report__empty">{error ? 'No records to display.' : 'No SHG tracking records found.'}</div>
         ) : (
-          <div className="master-table-shell" style={{ border: 'none', borderRadius: 0, boxShadow: 'none' }}>
-            <table className="master-table">
-              <thead>
-                <tr>
-                  {orderedColumns.map((column) => (
-                    <th key={column}>{columnLabels[column]}</th>
-                  ))}
-                  <th>Images</th>
-                </tr>
-              </thead>
-              <tbody>
-                {pagedRows.length === 0 ? (
-                  <tr>
-                    <td colSpan={orderedColumns.length + 1} className="master-empty">
-                      No report records available for {activeSection.label}.
-                    </td>
-                  </tr>
-                ) : (
-                  pagedRows.map((record) => (
-                    <tr key={record.livelihoodId}>
-                      {orderedColumns.map((column) =>
-                        column === 'memberName' ? (
-                          <td key={column}>
-                            <button
-                              type="button"
-                              className="excel-preview-btn"
-                              onClick={() => openMemberDashboard(record)}
-                            >
-                              {record.memberName}
-                            </button>
-                          </td>
-                        ) : (
-                          <td key={column}>{record[column]}</td>
-                        ),
-                      )}
-                      <td>
-                        <button
-                          type="button"
-                          className="excel-preview-btn"
-                          onClick={() => viewImages(record)}
-                        >
-                          View Images
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+          <div className="tracking-report__list">
+            {records.map((row, index) => {
+              const hasLocation = row.latitude != null && row.longitude != null;
+              return (
+                <article className="tracking-report__record" key={`${row.memberId}-${row.trackingDate ?? page}-${index}`}>
+                  <header className="tracking-report__record-head">
+                    <div>
+                      <p>SHG MEMBER · {display(row.memberCode)}</p>
+                      <h2>{row.memberName || `Member ${row.memberId}`}</h2>
+                      <span>{row.shgName || dash} <span aria-hidden="true">·</span> {row.shgCode || dash}</span>
+                    </div>
+                    <div className="tracking-report__record-id">
+                      <span>Member ID</span><strong>{row.memberId}</strong>
+                      <small>{formatDate(row.trackingDate)}</small>
+                    </div>
+                  </header>
+
+                  <div className="tracking-report__record-body">
+                    <FieldGroup title="Location">
+                      <DataField label="District" value={`${display(row.districtName)} · ${display(row.districtId)}`} />
+                      <DataField label="Block" value={`${display(row.blockName)} · ${display(row.blockId)}`} />
+                      <DataField label="Gram Panchayat" value={`${display(row.gpName)} · ${display(row.gpId)}`} />
+                      <DataField label="Village" value={`${display(row.villageName)} · ${display(row.villageId)}`} />
+                      <DataField label="Coordinates" value={hasLocation ? `${row.latitude}, ${row.longitude}` : 'Not captured'} />
+                      {hasLocation && <DataField label="Map" value={<a className="tracking-report__map-link" href={mapsUrl(row)} target="_blank" rel="noreferrer"><MapPin size={14} /> Open map <ExternalLink size={13} /></a>} />}
+                    </FieldGroup>
+
+                    <FieldGroup title="Livelihood & income">
+                      <DataField label="Activity" value={`${display(row.activityName)} · ${display(row.activityId)}`} />
+                      <DataField label="Subactivity" value={`${display(row.subActivityName)} · ${display(row.subCategoryId)}`} />
+                      <DataField label="Investment" value={currency(row.investmentAmount)} />
+                      <DataField label="Income before support" value={currency(row.incomeBeforeSupport)} />
+                      <DataField label="Future projection" value={currency(row.futureProjection)} />
+                    </FieldGroup>
+
+                    <FieldGroup title="Visit status">
+                      <div className="tracking-report__statuses">
+                        <Status label="Geo" value={row.geoStatus || dash} />
+                        <Status label="Image" value={row.imageStatus || dash} />
+                        <Status label="Video" value={row.videoStatus || dash} />
+                        <Status label="Training" value={row.trainingStatus || dash} />
+                        <Status label="Financial support" value={row.financialSupportStatus || dash} />
+                      </div>
+                      <DataField label="Remarks" value={row.remarks || dash} wide />
+                    </FieldGroup>
+
+                    <FieldGroup title="Visit media">
+                      <div className="tracking-report__media">
+                        {row.activityImagePath ? (
+                          <a className="tracking-report__media-item" href={mediaUrl(row.activityImagePath)} target="_blank" rel="noreferrer">
+                            <img src={mediaUrl(row.activityImagePath)} alt={`Activity for ${row.memberName}`} loading="lazy" />
+                            <span>Activity image</span><code>{row.activityImagePath}</code>
+                          </a>
+                        ) : <div className="tracking-report__media-empty">No activity image</div>}
+                        {row.videoPath ? (
+                          <div className="tracking-report__media-item">
+                            <video src={mediaUrl(row.videoPath)} controls preload="metadata" />
+                            <span>Visit video</span><code>{row.videoPath}</code>
+                          </div>
+                        ) : <div className="tracking-report__media-empty">No visit video</div>}
+                      </div>
+                    </FieldGroup>
+                  </div>
+                </article>
+              );
+            })}
           </div>
         )}
 
-        {!loading && activeRows.length > 0 && (
-          <div className="report-pagination">
-            <span className="report-pagination__info">
-              Showing {rangeStart}–{rangeEnd} of {activeRows.length}
-            </span>
-            <div className="report-pagination__controls">
-              <button
-                type="button"
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-              >
-                Prev
-              </button>
-              <span className="report-pagination__page">
-                Page {currentPage} of {totalPages}
-              </span>
-              <button
-                type="button"
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
-              >
-                Next
-              </button>
-            </div>
+        <footer className="tracking-report__pagination">
+          <span>{pageStart ? `Showing ${pageStart}–${pageEnd}` : 'No records'}{totalRecords ? ` of ${totalRecords}` : ''}</span>
+          <div>
+            <button type="button" onClick={() => setPage((current) => Math.max(1, current - 1))} disabled={page <= 1 || loading}>Previous</button>
+            <strong>Page {page}</strong>
+            <button type="button" onClick={() => setPage((current) => current + 1)} disabled={!hasNextPage || loading}>Next</button>
           </div>
-        )}
-      </section>
-
-      {imagesFor && (
-        <div className="report-images-modal-backdrop" onClick={() => setImagesFor(null)}>
-          <div className="report-images-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="report-images-modal__header">
-              <h3>Livelihood Images — {imagesFor.memberName}</h3>
-              <button type="button" onClick={() => setImagesFor(null)}>
-                <X size={18} />
-              </button>
-            </div>
-            <div className="report-images-modal__body">
-              {imagesLoading ? (
-                <Loader />
-              ) : imagesError ? (
-                <p className="master-empty">{imagesError}</p>
-              ) : images.length === 0 ? (
-                <p className="master-empty">No images uploaded for this livelihood record.</p>
-              ) : (
-                <div className="report-images-grid">
-                  {images.map((img) => (
-                    <a
-                      key={img.ImageId}
-                      href={resolveMediaUrl(img.ImagePath)}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="report-images-grid__item"
-                    >
-                      {brokenImageIds.has(img.ImageId) ? (
-                        <div className="report-images-grid__broken">Image unavailable</div>
-                      ) : (
-                        <img
-                          src={resolveMediaUrl(img.ImagePath)}
-                          alt={`Livelihood ${img.LivelihoodId}`}
-                          onError={() =>
-                            setBrokenImageIds((prev) => new Set(prev).add(img.ImageId))
-                          }
-                        />
-                      )}
-                      <span>{img.UploadedDate ? new Date(img.UploadedDate).toLocaleDateString('en-IN') : '—'}</span>
-                    </a>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+        </footer>
+      </div>
     </PageShell>
   );
 };

@@ -11,6 +11,7 @@ import {
 } from '../../services/masterService';
 import type { District, SignupBlockOption, GramPanchayat, Village } from '../../types/master.types';
 import { useAuth } from '../../context/AuthContext';
+import MemberDetailCollections from './MemberDetailCollections';
 import './MasterData.css';
 import './Activity.css';
 import '../reports/Reports.css';
@@ -290,6 +291,7 @@ const ShgLivelihoodPage: React.FC = () => {
                             <th>Gram Panchayat</th>
                             <th>Village</th>
                             <th>Activity</th>
+                            <th>Subactivity</th>
                             <th>Investment</th>
                             <th>Geo Status</th>
                             <th>Training</th>
@@ -300,11 +302,11 @@ const ShgLivelihoodPage: React.FC = () => {
                     <tbody>
                         {loading ? (
                             <tr>
-                                <td colSpan={12} className="master-empty">Loading report records...</td>
+                                <td colSpan={13} className="master-empty">Loading report records...</td>
                             </tr>
                         ) : records.length === 0 ? (
                             <tr>
-                                <td colSpan={12} className="master-empty">No records found matching your filters.</td>
+                                <td colSpan={13} className="master-empty">No records found matching your filters.</td>
                             </tr>
                         ) : (
                             records.map((row) => (
@@ -327,7 +329,8 @@ const ShgLivelihoodPage: React.FC = () => {
                                     <td>{row.blockName || '—'}</td>
                                     <td>{row.gpName || '—'}</td>
                                     <td>{row.villageName || '—'}</td>
-                                    <td>{row.activityName || row.subActivityName || '—'}</td>
+                                    <td>{row.activityName || '—'}</td>
+                                    <td>{row.subActivityName || '—'}</td>
                                     <td>{fmtCurrency(row.investmentAmount)}</td>
                                     <td>
                                         {row.geoStatus || '—'}
@@ -374,7 +377,7 @@ const ShgLivelihoodPage: React.FC = () => {
 
             {selectedRecord && (
                 <div className="modal-overlay" onClick={() => setSelectedRecord(null)}>
-                    <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+                    <div className="modal-card member-report-modal" onClick={(e) => e.stopPropagation()}>
                         <div className="modal-header">
                             {selectedRecord.activityImagePath ? (
                                 <img
@@ -459,6 +462,8 @@ const ShgLivelihoodPage: React.FC = () => {
                                     )}
                                 </div>
                             </div>
+
+                            <MemberDetailCollections memberId={selectedRecord.memberId} />
 
                             <div className="modal-actions">
                                 <button type="button" className="btn-print" onClick={() => window.print()}>

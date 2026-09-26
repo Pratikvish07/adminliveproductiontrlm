@@ -5,8 +5,6 @@ import {
   ChevronRight,
   CloudSun,
   Factory,
-  HandCoins,
-  IndianRupee,
   LandPlot,
   LayoutDashboard,
   LogOut,
@@ -52,8 +50,6 @@ const Sidebar: React.FC = () => {
             { path: '/staff/users', label: 'All Users', icon: Users },
             { path: '/staff/create-user', label: 'Create User', icon: Users },
             { path: '/analytics', label: 'Analytics', icon: TrendingUp },
-            { path: '/financial-support', label: 'Financial Support', icon: HandCoins },
-            { path: '/income-profile', label: 'Income Profile', icon: IndianRupee },
           ],
         },
         {
