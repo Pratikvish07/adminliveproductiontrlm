@@ -2,7 +2,7 @@
   padding: 28px;
   min-height: 100%;
   background:
-    radial-gradient(circle at top right, rgba(39, 106, 152, 0.12), transparent 22%),
+    radial-gradient(circle at top right, rgba(16, 64, 63, 0.12), transparent 22%),
     linear-gradient(180deg, #f7f2e8 0%, #eef6fb 100%);
 }
 
@@ -12,7 +12,7 @@
 
 .master-kicker {
   margin: 0 0 8px;
-  color: #276a98;
+  color: #10403f;
   font-size: 0.78rem;
   font-weight: 700;
   letter-spacing: 0.16em;
@@ -21,21 +21,21 @@
 
 .master-title {
   margin: 0;
-  color: #17324a;
+  color: #0b2d2c;
 }
 
 .master-subtitle {
   margin: 10px 0 0;
-  color: #5f7386;
+  color: #5a6b6e;
 }
 
 .master-alert {
   margin-bottom: 18px;
   padding: 12px 14px;
   border-radius: 14px;
-  border: 1px solid rgba(204, 52, 64, 0.14);
-  background: rgba(255, 236, 236, 0.92);
-  color: #b52a35;
+  border: 1px solid rgba(165, 67, 47, 0.14);
+  background: rgba(244, 224, 218, 0.92);
+  color: #a5432f;
 }
 
 .master-summary-card {
@@ -43,8 +43,8 @@
   padding: 22px;
   border-radius: 22px;
   background: rgba(255, 255, 255, 0.88);
-  border: 1px solid rgba(39, 106, 152, 0.12);
-  box-shadow: 0 18px 45px rgba(22, 55, 85, 0.08);
+  border: 1px solid rgba(16, 64, 63, 0.12);
+  box-shadow: 0 18px 45px rgba(11, 45, 44, 0.08);
 }
 
 .master-summary-card h2 {
@@ -54,7 +54,7 @@
 }
 
 .master-summary-card span {
-  color: #17324a;
+  color: #0b2d2c;
   font-size: clamp(2rem, 4vw, 3rem);
   font-weight: 700;
 }
@@ -77,7 +77,7 @@
 }
 
 .master-filter-group label {
-  color: #17324a;
+  color: #0b2d2c;
   font-size: 0.92rem;
   font-weight: 700;
 }
@@ -85,10 +85,10 @@
 .master-filter-group select {
   width: 100%;
   padding: 13px 14px;
-  border: 1px solid rgba(118, 145, 170, 0.26);
+  border: 1px solid rgba(90, 107, 110, 0.26);
   border-radius: 14px;
-  background: rgba(248, 251, 253, 0.98);
-  color: #1d3953;
+  background: rgba(237, 245, 240, 0.98);
+  color: #17262a;
 }
 
 .master-filter-group select:disabled {
@@ -100,8 +100,8 @@
   overflow-x: auto;
   border-radius: 22px;
   background: rgba(255, 255, 255, 0.9);
-  border: 1px solid rgba(39, 106, 152, 0.12);
-  box-shadow: 0 18px 45px rgba(22, 55, 85, 0.08);
+  border: 1px solid rgba(16, 64, 63, 0.12);
+  box-shadow: 0 18px 45px rgba(11, 45, 44, 0.08);
 }
 
 .master-table {
@@ -114,15 +114,15 @@
 .master-table td {
   padding: 14px 16px;
   text-align: left;
-  border-bottom: 1px solid rgba(39, 106, 152, 0.1);
-  color: #1d3953;
+  border-bottom: 1px solid rgba(16, 64, 63, 0.1);
+  color: #17262a;
   font-size: 0.92rem;
   vertical-align: top;
 }
 
 .master-table th {
-  background: rgba(237, 245, 250, 0.92);
-  color: #17324a;
+  background: rgba(229, 239, 236, 0.92);
+  color: #0b2d2c;
   font-weight: 700;
 }
 

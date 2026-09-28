@@ -3,7 +3,13 @@ import { getWithFallback } from './requestFallback';
 
 export type CRPRecord = Record<string, unknown>;
 export type PendingCRPRecord = Record<string, unknown>;
-export type SHGMemberRecord = Record<string, unknown>;
+export type SHGMemberRecord = {
+  MemberId: number;
+  MemberName: string;
+  SHGCode: string;
+  SHGName: string;
+  MobileNo: string;
+};
 export type CreateCRPPayload = {
   fullName: string;
   aadhaarNo: string;
@@ -20,10 +26,10 @@ export type CreateCRPPayload = {
   longitude: number;
 };
 
-type SHGMembersByVillageResponse = {
+export type SHGUploadResponse = {
   status?: boolean;
   message?: string;
-  data?: SHGMemberRecord[];
+  [key: string]: unknown;
 };
 
 const toOptionalInt = (value: string | number | undefined): number | undefined => {
@@ -157,10 +163,20 @@ export const crpService = {
   },
 
   getSHGMembersByVillage: async (villageId: string): Promise<SHGMemberRecord[]> => {
-    const response = await api.get<SHGMembersByVillageResponse>(
-      `/SHGUpload/members-by-village/${villageId}`,
-    );
-    return Array.isArray(response.data?.data) ? response.data.data : [];
+    const response = await api.get<SHGMemberRecord[]>(`/master/shg-member/${villageId}`);
+    return Array.isArray(response.data) ? response.data : [];
+  },
+
+  /**
+   * Bulk-upload the SHG master file (Excel/CSV). Updates SHG data used across the app.
+   */
+  uploadSHGFile: async (file: File): Promise<SHGUploadResponse> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await api.post<SHGUploadResponse>('/SHGUpload/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
   },
 
   createCRP: async (payload: CreateCRPPayload) => {

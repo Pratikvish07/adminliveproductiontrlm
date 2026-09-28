@@ -1,15 +1,10 @@
 import api from './api';
-import type { District, Block, Role, Village, GramPanchayat, SubCategory, LivelihoodActivity, Season, ShgLivelihood, Production, CrpType } from '../types/master.types';
+import type { District, Block, Role, Village, GramPanchayat, SubCategory, LivelihoodActivity, Season, ShgLivelihood, Production, CrpType, LivelihoodImage } from '../types/master.types';
 import { getWithFallback } from './requestFallback';
 
 export type SignupBlockOption = {
   blockId: number | string;
   blockName: string;
-};
-
-export type DashboardCount = {
-  Title: string;
-  TotalCount: number;
 };
 
 let districtsPromise: Promise<District[]> | null = null;
@@ -135,12 +130,142 @@ export const getGramPanchayats = async (blockId: number | string): Promise<GramP
   return response.data;
 };
 
-export const getDashboardCounts = async (): Promise<DashboardCount[]> => {
-  const response = await getWithFallback<unknown>([
-    '/master/dashboard-counts',
-    '/dashboard-counts',
-  ]);
-  return Array.isArray(response) ? response as DashboardCount[] : [];
+export type DashboardOverview = {
+  summary: {
+    shgMembers: number;
+    shGsCovered: number;
+    annualTurnover: number;
+    trainingPending: number;
+  };
+  livelihoodActivities: Array<{ activityId: number; activityName: string; memberCount: number }>;
+  trainingRequirements: Array<{ activityId: number; activityName: string; pendingCount: number }>;
+  financialSupport: { financialSupportRequired: number };
+  loanCycles: Array<{ loanCycleId: number; cycleName: string; memberCount: number }>;
+};
+
+export type DashboardFilters = {
+  staffUserId: string | number;
+  districtId?: string | number;
+  blockId?: string | number;
+  gpId?: string | number;
+  villageId?: string | number;
+  shgCode?: string;
+  memberId?: string | number;
+};
+
+export const getDashboardOverview = async (filters: DashboardFilters): Promise<DashboardOverview> => {
+  const response = await api.get<{ success: boolean; message: string; data: DashboardOverview }>('/Dashboard', {
+    params: {
+      StaffUserId: filters.staffUserId,
+      DistrictId: filters.districtId || undefined,
+      BlockId: filters.blockId || undefined,
+      GPId: filters.gpId || undefined,
+      VillageId: filters.villageId || undefined,
+      SHGCode: filters.shgCode || undefined,
+      MemberId: filters.memberId || undefined,
+    },
+  });
+  return response.data.data;
+};
+
+export type DashboardAnalytics = {
+  summary: {
+    SHGMembers: number;
+    SHGsCovered: number;
+    AnnualTurnover: number;
+    TrainingPending: number;
+  };
+  districts: Array<{ DistrictId: number; DistrictName: string; Members: number; SHGs: number; Turnover: number }>;
+  blocks: Array<{ BlockId: number; BlockName: string; Members: number; SHGs: number; Turnover: number }>;
+  livelihoodActivities: Array<{ ActivityId: number; ActivityName: string; MemberCount: number }>;
+  trainingNeed: Array<{ DistrictId: number; DistrictName: string; TrainingRequiredMembers: number }>;
+  fundRequirement: Array<{ LoanCycleId: number; CycleName: string; MemberCount: number }>;
+};
+
+export const getDashboardAnalytics = async (filters: DashboardFilters): Promise<DashboardAnalytics> => {
+  const response = await api.get<{ success: boolean; message: string; data: DashboardAnalytics }>('/Dashboard/analytics', {
+    params: {
+      staffUserId: filters.staffUserId,
+      districtId: filters.districtId || undefined,
+      blockId: filters.blockId || undefined,
+      gpId: filters.gpId || undefined,
+      villageId: filters.villageId || undefined,
+      shgCode: filters.shgCode || undefined,
+      memberId: filters.memberId || undefined,
+    },
+  });
+  return response.data.data;
+};
+
+export type SHGTrackingReportRecord = {
+  memberId: number;
+  districtId: number | null;
+  districtName: string | null;
+  blockId: number | null;
+  blockName: string | null;
+  gpId: number | null;
+  gpName: string | null;
+  villageId: number | null;
+  villageName: string | null;
+  shgCode: string | null;
+  shgName: string | null;
+  memberCode: string | null;
+  memberName: string | null;
+  activityId: number | null;
+  activityName: string | null;
+  subCategoryId: number | null;
+  subActivityName: string | null;
+  investmentAmount: number;
+  incomeBeforeSupport: number | null;
+  futureProjection: number | null;
+  latitude: number | null;
+  longitude: number | null;
+  activityImagePath: string | null;
+  videoPath: string | null;
+  geoStatus: string | null;
+  imageStatus: string | null;
+  videoStatus: string | null;
+  remarks: string | null;
+  trackingDate: string | null;
+  trainingStatus: string;
+  financialSupportStatus: string;
+};
+
+export type SHGTrackingReportPage = {
+  pageNumber: number;
+  pageSize: number;
+  totalRecords: number;
+  totalPages: number;
+  records: SHGTrackingReportRecord[];
+};
+
+export type SHGTrackingReportFilters = DashboardFilters & {
+  search?: string;
+  pageNumber?: number;
+  pageSize?: number;
+};
+
+export const getSHGTrackingControllerReport = async (
+  filters: SHGTrackingReportFilters,
+): Promise<SHGTrackingReportPage> => {
+  const response = await api.get<{ success: boolean; message: string; data: SHGTrackingReportPage }>(
+    '/SHGTrackingControllerReport',
+    {
+      params: {
+        StaffUserId: filters.staffUserId,
+        DistrictId: filters.districtId || undefined,
+        BlockId: filters.blockId || undefined,
+        GPId: filters.gpId || undefined,
+        VillageId: filters.villageId || undefined,
+        SHGCode: filters.shgCode || undefined,
+        MemberId: filters.memberId || undefined,
+        Search: filters.search || undefined,
+        PageNumber: filters.pageNumber || undefined,
+        PageSize: filters.pageSize || undefined,
+      },
+    },
+  );
+  return response.data.data;
 };
 
 // ── Role CRUD ─────────────────────────────────────────────────────────────
@@ -165,17 +290,17 @@ export const createRole = async (data: {
 export const updateRole = async (id: number, data: {
   roleName: string;
 }): Promise<void> => {
-  // Try query params first as it's common in this backend
-  await api.put('/Role', null, {
-    params: { roleId: id, roleName: data.roleName },
+  // PUT /Role/{id} — JSON body: { roleId, roleName, createdDate }
+  await api.put(`/Role/${id}`, {
+    roleId: id,
+    roleName: data.roleName,
+    createdDate: new Date().toISOString(),
   });
 };
 
 export const deleteRole = async (id: number): Promise<void> => {
-  // Try both casing if one fails, but starting with PascalCase
-  await api.delete('/Role', {
-    params: { roleId: id },
-  });
+  // DELETE /Role/{id}
+  await api.delete(`/Role/${id}`);
 };
 
 export const getSubCategories = async (): Promise<SubCategory[]> => {
@@ -320,6 +445,18 @@ export const getShgLivelihoods = async (): Promise<ShgLivelihood[]> => {
   })).filter((s: ShgLivelihood) => s.LivelihoodId && s.MemberId);
 };
 
+export const getLivelihoodImages = async (livelihoodId: number): Promise<LivelihoodImage[]> => {
+  const response = await api.get(`/livelihood/images/${livelihoodId}`);
+  const raw = Array.isArray(response.data) ? response.data : (response.data?.data ?? []);
+
+  return raw.map((item: any) => ({
+    ImageId: Number(item.ImageId ?? item.imageId ?? 0),
+    LivelihoodId: Number(item.LivelihoodId ?? item.livelihoodId ?? livelihoodId),
+    ImagePath: String(item.ImagePath ?? item.imagePath ?? ''),
+    UploadedDate: String(item.UploadedDate ?? item.uploadedDate ?? ''),
+  })).filter((img: LivelihoodImage) => img.ImageId && img.ImagePath);
+};
+
 export const deleteShgLivelihood = async (id: number): Promise<void> => {
   // DELETE /livelihood/{id}
   await api.delete(`/livelihood/${id}`);
@@ -438,7 +575,9 @@ export const masterService = {
   getRoles,
   getVillages,
   getGramPanchayats,
-  getDashboardCounts,
+  getDashboardOverview,
+  getDashboardAnalytics,
+  getSHGTrackingControllerReport,
   getSubCategories,
   createSubCategory,
   updateSubCategory,

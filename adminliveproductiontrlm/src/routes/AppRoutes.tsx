@@ -12,6 +12,7 @@ import RolePage from '../pages/master/Role';
 import ActivityPage from '../pages/master/Activity';
 import SeasonPage from '../pages/master/Season';
 import ShgLivelihoodPage from '../pages/master/ShgLivelihood';
+import ShgUploadPage from '../pages/master/ShgUpload';
 import ProductionPage from '../pages/master/Production';
 import CrpTypePage from '../pages/master/CrpType';
 import LandTypePage from '../pages/master/LandType';
@@ -21,7 +22,6 @@ import IncomeProfilePage from '../pages/admin/IncomeProfile';
 import AllUsers from '../pages/staff/AllUsers';
 import StaffApproval from '../pages/staff/StaffApproval';
 // CRP
-import CRPList from '../pages/crp/CRPList';
 import CRPApproval from '../pages/crp/CRPApproval';
 import CRPCreate from '../pages/crp/CRPCreate';
 import SHGMemberList from '../pages/crp/SHGMemberList';
@@ -30,6 +30,7 @@ import LoanTracking from '../pages/payment/LoanTracking';
 import LoanApproval from '../pages/payment/LoanApproval';
 import Payments from '../pages/payment/Payments';
 import Reports from '../pages/reports/Reports';
+import ShgMemberDashboard from '../pages/reports/ShgMemberDashboard';
 import Analytics from '../pages/analytics/Analytics';
 import { ROLE_IDS } from '../utils/roleAccess';
 
@@ -77,6 +78,10 @@ const AppRoutes: React.FC = () => {
           element={<ProtectedRoute allowedRoles={[ROLE_IDS.STATE_ADMIN]}><ShgLivelihoodPage /></ProtectedRoute>}
         />
         <Route
+          path="/master/shg-upload"
+          element={<ProtectedRoute allowedRoles={[ROLE_IDS.STATE_ADMIN]}><ShgUploadPage /></ProtectedRoute>}
+        />
+        <Route
           path="/master/production"
           element={<ProtectedRoute allowedRoles={[ROLE_IDS.STATE_ADMIN]}><ProductionPage /></ProtectedRoute>}
         />
@@ -117,10 +122,6 @@ const AppRoutes: React.FC = () => {
         />
         {/* CRP */}
         <Route
-          path="/crp/list"
-          element={<ProtectedRoute allowedRoles={[ROLE_IDS.STATE_ADMIN, ROLE_IDS.DISTRICT_STAFF, ROLE_IDS.BLOCK_STAFF]}><CRPList /></ProtectedRoute>}
-        />
-        <Route
           path="/crp/approval"
           element={<ProtectedRoute allowedRoles={[ROLE_IDS.BLOCK_STAFF]}><CRPApproval /></ProtectedRoute>}
         />
@@ -139,6 +140,10 @@ const AppRoutes: React.FC = () => {
         <Route
           path="/reports"
           element={<ProtectedRoute allowedRoles={[ROLE_IDS.STATE_ADMIN, ROLE_IDS.DISTRICT_STAFF, ROLE_IDS.BLOCK_STAFF]}><Reports /></ProtectedRoute>}
+        />
+        <Route
+          path="/reports/shg-member/:memberId"
+          element={<ProtectedRoute allowedRoles={[ROLE_IDS.STATE_ADMIN, ROLE_IDS.DISTRICT_STAFF, ROLE_IDS.BLOCK_STAFF]}><ShgMemberDashboard /></ProtectedRoute>}
         />
         <Route
           path="/analytics"

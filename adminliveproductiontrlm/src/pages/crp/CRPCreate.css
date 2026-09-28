@@ -2,7 +2,7 @@
   padding: 1.5rem;
   border-radius: 1.6rem;
   background: rgba(255, 255, 255, 0.96);
-  border: 1px solid rgba(20, 59, 97, 0.08);
+  border: 1px solid rgba(11, 45, 44, 0.08);
   box-shadow: 0 18px 40px rgba(15, 36, 55, 0.08);
 }
 
@@ -23,24 +23,67 @@
 }
 
 .crp-create-field span {
-  color: #52667a;
+  color: #5a6b6e;
   font-size: 0.8rem;
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
-.crp-create-field input {
+.crp-create-field input,
+.crp-create-field select {
   width: 100%;
-  border: 1px solid rgba(20, 59, 97, 0.12);
+  border: 1px solid rgba(11, 45, 44, 0.12);
   border-radius: 1rem;
   padding: 0.85rem 1rem;
-  color: #17324a;
-  background: rgba(248, 251, 254, 0.96);
+  color: #0b2d2c;
+  background: rgba(237, 245, 240, 0.96);
+  font: inherit;
 }
 
-.crp-create-field input:disabled {
+.crp-create-field input:disabled,
+.crp-create-field select:disabled {
   opacity: 0.7;
+}
+
+.crp-create-shg-preview {
+  padding: 1.1rem 1.25rem;
+  border-radius: 1.25rem;
+  background: rgba(16, 64, 63, 0.05);
+  border: 1px solid rgba(11, 45, 44, 0.1);
+}
+
+.crp-create-shg-preview h3 {
+  margin: 0 0 0.85rem;
+  color: #0b2d2c;
+  font-size: 1rem;
+}
+
+.crp-create-shg-preview p {
+  margin: 0;
+  color: #5a6b6e;
+}
+
+.crp-create-shg-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.crp-create-shg-table th,
+.crp-create-shg-table td {
+  padding: 0.65rem 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid rgba(11, 45, 44, 0.08);
+  font-size: 0.88rem;
+  color: #0b2d2c;
+}
+
+.crp-create-shg-table th {
+  color: #5a6b6e;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .crp-create-field--wide {
@@ -60,7 +103,7 @@
 
 .crp-create-message--error {
   background: rgba(212, 87, 70, 0.12);
-  color: #b93b2b;
+  color: #a5432f;
 }
 
 .crp-create-message--success {

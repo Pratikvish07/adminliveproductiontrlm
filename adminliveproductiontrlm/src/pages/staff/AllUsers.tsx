@@ -1,4 +1,5 @@
 import React from 'react';
+import { ChevronLeft, ChevronRight, Pencil, RefreshCw, Search, Users } from 'lucide-react';
 import Loader from '../../components/common/Loader';
 import { useAuth } from '../../context/AuthContext';
 import { staffService } from '../../services/staffService';
@@ -18,20 +19,6 @@ type UserEditForm = {
   districtName: string;
   blockName: string;
   livelihoodTrackerId: string;
-};
-
-const ROLE_COLORS: Record<string, string> = {
-  STATE_ADMIN: '#0f4c81',
-  DISTRICT_STAFF: '#1f78b4',
-  BLOCK_STAFF: '#f29f05',
-  USER: '#6c7f92',
-};
-
-const APPROVAL_COLORS: Record<string, string> = {
-  approved: '#1f9d6e',
-  pending: '#f29f05',
-  rejected: '#d8574b',
-  unknown: '#6c7f92',
 };
 
 const getLoadUsersErrorMessage = (err: any): string => {
@@ -139,6 +126,9 @@ const AllUsers: React.FC = () => {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState('');
   const [currentPage, setCurrentPage] = React.useState(1);
+  const [search, setSearch] = React.useState('');
+  const [roleFilter, setRoleFilter] = React.useState('all');
+  const [statusFilter, setStatusFilter] = React.useState('all');
   const [editingRecord, setEditingRecord] = React.useState<StaffAnalyticsRecord | null>(null);
   const [editForm, setEditForm] = React.useState<UserEditForm | null>(null);
   const [saveError, setSaveError] = React.useState('');
@@ -174,18 +164,6 @@ const AllUsers: React.FC = () => {
     void loadUsers();
   }, [loadUsers]);
 
-  const roleBreakdown = React.useMemo(() => {
-    const map = new Map<string, number>();
-    for (const record of records) {
-      const label = getStaffRoleLabel(record);
-      map.set(label, (map.get(label) ?? 0) + 1);
-    }
-
-    return Array.from(map.entries())
-      .map(([label, count]) => ({ label, count }))
-      .sort((a, b) => b.count - a.count);
-  }, [records]);
-
   const approvalBreakdown = React.useMemo(() => {
     const buckets: Array<'approved' | 'pending' | 'rejected' | 'unknown'> = ['approved', 'pending', 'rejected', 'unknown'];
     return buckets.map((bucket) => ({
@@ -194,45 +172,35 @@ const AllUsers: React.FC = () => {
     }));
   }, [records]);
 
-  const districtBreakdown = React.useMemo(() => {
-    const map = new Map<string, number>();
-    for (const record of records) {
-      const district = getDistrictName(record);
-      map.set(district, (map.get(district) ?? 0) + 1);
-    }
-
-    return Array.from(map.entries())
-      .map(([label, count]) => ({ label, count }))
-      .filter((item) => item.label !== '-')
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 6);
-  }, [records]);
-
-  const topValue = React.useMemo(() => {
-    const candidateValues = [
-      ...roleBreakdown.map((item) => item.count),
-      ...approvalBreakdown.map((item) => item.count),
-      ...districtBreakdown.map((item) => item.count),
-    ];
-
-    return Math.max(...candidateValues, 1);
-  }, [approvalBreakdown, districtBreakdown, roleBreakdown]);
-
   const totalUsers = records.length;
   const approvedUsers = approvalBreakdown.find((item) => item.label === 'approved')?.count ?? 0;
   const pendingUsers = approvalBreakdown.find((item) => item.label === 'pending')?.count ?? 0;
   const rejectedUsers = approvalBreakdown.find((item) => item.label === 'rejected')?.count ?? 0;
-  const totalPages = Math.max(1, Math.ceil(totalUsers / USERS_PER_PAGE));
+  const roles = React.useMemo(() => Array.from(new Set(records.map(getStaffRoleLabel))).sort(), [records]);
+  const filteredUsers = React.useMemo(() => {
+    const term = search.trim().toLowerCase();
+    return records.filter((record) => {
+      const matchesSearch = !term || [
+        getDisplayName(record), getStaffRoleLabel(record), record.officialEmail, record.email,
+        record.contactNumber, record.mobile, record.designation, getDistrictName(record),
+        record.blockName, record.block, record.livelihoodTrackerId,
+      ].some((value) => String(value ?? '').toLowerCase().includes(term));
+      return matchesSearch
+        && (roleFilter === 'all' || getStaffRoleLabel(record) === roleFilter)
+        && (statusFilter === 'all' || getApprovalBucket(record) === statusFilter);
+    });
+  }, [records, roleFilter, search, statusFilter]);
+  const totalPages = Math.max(1, Math.ceil(filteredUsers.length / USERS_PER_PAGE));
   const paginatedUsers = React.useMemo(() => {
     const startIndex = (currentPage - 1) * USERS_PER_PAGE;
-    return records.slice(startIndex, startIndex + USERS_PER_PAGE);
-  }, [currentPage, records]);
-  const pageStart = totalUsers === 0 ? 0 : (currentPage - 1) * USERS_PER_PAGE + 1;
-  const pageEnd = Math.min(currentPage * USERS_PER_PAGE, totalUsers);
+    return filteredUsers.slice(startIndex, startIndex + USERS_PER_PAGE);
+  }, [currentPage, filteredUsers]);
+  const pageStart = filteredUsers.length === 0 ? 0 : (currentPage - 1) * USERS_PER_PAGE + 1;
+  const pageEnd = Math.min(currentPage * USERS_PER_PAGE, filteredUsers.length);
 
   React.useEffect(() => {
     setCurrentPage(1);
-  }, [records]);
+  }, [records, roleFilter, search, statusFilter]);
 
   React.useEffect(() => {
     if (currentPage > totalPages) {
@@ -287,213 +255,80 @@ const AllUsers: React.FC = () => {
 
   return (
     <div className="staff-page staff-page--analytics">
-      <section className="staff-hero">
-        <div className="staff-hero__copy">
-          <p className="staff-kicker">User Analytics</p>
-          <h1>All users, visualized for faster review</h1>
-          <p className="staff-subtitle">
-            This page loads directly from the live all-users API and turns the user base into role, approval,
-            and district graphs so you can scan the system quickly.
-          </p>
-          <div className="staff-hero__status">
-            {error && <span className="staff-status-badge staff-status-badge--warn">Live API error</span>}
+      <main className="users-directory">
+        <header className="users-directory__heading">
+          <div>
+            <p className="staff-kicker">Administration</p>
+            <h2>All users</h2>
+            <p>Review account access, contact details, and approval status.</p>
           </div>
-        </div>
+          <button className="users-directory__refresh" type="button" onClick={() => void loadUsers()} disabled={loading}>
+            <RefreshCw size={16} className={loading ? 'is-spinning' : ''} />
+            Refresh
+          </button>
+        </header>
 
-        <div className="staff-hero__metric">
-          <span>Total visible users</span>
-          <strong>{formatCount(totalUsers)}</strong>
-          <p>
-            Approved {formatCount(approvedUsers)} · Pending {formatCount(pendingUsers)} · Rejected {formatCount(rejectedUsers)}
-          </p>
-        </div>
-      </section>
+        {error && <div className="staff-alert staff-alert--analytics">{error}</div>}
 
-      {error && <div className="staff-alert staff-alert--analytics">{error}</div>}
+        <section className="users-directory__summary" aria-label="User totals">
+          <div><span>Total users</span><strong>{formatCount(totalUsers)}</strong><small>Visible in your area</small></div>
+          <div><span>Approved</span><strong>{formatCount(approvedUsers)}</strong><small>Active accounts</small></div>
+          <div><span>Pending</span><strong>{formatCount(pendingUsers)}</strong><small>Awaiting review</small></div>
+          <div><span>Rejected</span><strong>{formatCount(rejectedUsers)}</strong><small>Not approved</small></div>
+        </section>
 
-      <section className="staff-analytics-grid">
-        <article className="staff-panel staff-panel--wide">
-          <div className="staff-panel-head">
-            <div>
-              <h2>Role distribution graph</h2>
-              <p>Compare how users are split across role categories.</p>
+        <section className="users-directory__table-section">
+          <div className="users-directory__toolbar">
+            <div className="users-directory__table-title">
+              <Users size={18} />
+              <strong>User directory</strong>
+              <span>{formatCount(filteredUsers.length)}</span>
+            </div>
+            <div className="users-directory__filters">
+              <label className="users-directory__search">
+                <Search size={16} />
+                <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search name, email, ID..." />
+              </label>
+              <select aria-label="Filter by role" value={roleFilter} onChange={(event) => setRoleFilter(event.target.value)}>
+                <option value="all">All roles</option>
+                {roles.map((role) => <option key={role} value={role}>{role}</option>)}
+              </select>
+              <select aria-label="Filter by approval status" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+                <option value="all">All statuses</option>
+                <option value="approved">Approved</option>
+                <option value="pending">Pending</option>
+                <option value="rejected">Rejected</option>
+                <option value="unknown">Unknown</option>
+              </select>
             </div>
           </div>
 
-          <div className="staff-bar-chart">
-            {roleBreakdown.map((item) => {
-              const width = (item.count / topValue) * 100;
-              const color = ROLE_COLORS[item.label] ?? ROLE_COLORS.USER;
-
-              return (
-                <div className="staff-bar-chart__row" key={item.label}>
-                  <div className="staff-bar-chart__meta">
-                    <span>{item.label}</span>
-                    <strong>{formatCount(item.count)}</strong>
-                  </div>
-                  <div className="staff-bar-chart__track">
-                    <div
-                      className="staff-bar-chart__fill"
-                      style={{
-                        width: `${Math.max(width, 7)}%`,
-                        background: `linear-gradient(90deg, ${color}, rgba(255,255,255,0.9))`,
-                      }}
-                    />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </article>
-
-        <article className="staff-panel">
-          <div className="staff-panel-head">
-            <div>
-              <h2>Approval rings</h2>
-              <p>Status mix across the current users dataset.</p>
-            </div>
-          </div>
-
-          <div className="staff-ring-grid">
-            {approvalBreakdown.map((item) => {
-              const share = totalUsers > 0 ? (item.count / totalUsers) * 100 : 0;
-              const color = APPROVAL_COLORS[item.label] ?? APPROVAL_COLORS.unknown;
-
-              return (
-                <div className="staff-ring-card" key={item.label}>
-                  <div
-                    className="staff-ring-chart"
-                    style={{
-                      background: `conic-gradient(${color} ${share}%, rgba(18, 50, 74, 0.12) ${share}% 100%)`,
-                    }}
-                  >
-                    <div className="staff-ring-chart__inner">
-                      <strong>{share.toFixed(0)}%</strong>
-                    </div>
-                  </div>
-                  <span>{item.label}</span>
-                </div>
-              );
-            })}
-          </div>
-        </article>
-
-        <article className="staff-panel">
-          <div className="staff-panel-head">
-            <div>
-              <h2>District heat view</h2>
-              <p>Top districts by user presence in the current dataset.</p>
-            </div>
-          </div>
-
-          <div className="staff-heat-grid">
-            {districtBreakdown.map((item) => {
-              const intensity = Math.round((item.count / topValue) * 100);
-              return (
-                <div
-                  className="staff-heat-card"
-                  key={item.label}
-                  style={{
-                    background: `linear-gradient(145deg, rgba(255,255,255,0.96), color-mix(in srgb, #1f78b4 ${Math.max(intensity, 20)}%, white))`,
-                  }}
-                >
-                  <span>{item.label}</span>
-                  <strong>{formatCount(item.count)}</strong>
-                </div>
-              );
-            })}
-            {districtBreakdown.length === 0 && (
-              <div className="staff-empty">No district distribution available.</div>
-            )}
-          </div>
-        </article>
-
-        <article className="staff-panel staff-panel--wide">
-          <div className="staff-panel-head">
-            <div>
-              <h2>All users list</h2>
-              <p>Browse the complete live dataset with pagination.</p>
-            </div>
-          </div>
-
-          {paginatedUsers.length === 0 ? (
-            <div className="staff-empty">No users found.</div>
-          ) : (
-            <>
-              <div className="staff-mini-table">
-                <div className="staff-mini-table__head">
-                  <span>Name</span>
-                  <span>Role</span>
-                  <span>Location</span>
-                  <span>Joined</span>
-                  <span>Status</span>
-                  <span>Action</span>
-                </div>
+          <div className="users-directory__table-scroll">
+            <table className="users-directory__table">
+              <thead><tr><th>User</th><th>Role</th><th>Contact</th><th>Location</th><th>Joined</th><th>Status</th><th><span className="sr-only">Actions</span></th></tr></thead>
+              <tbody>
                 {paginatedUsers.map((record, index) => (
-                  <div className="staff-mini-table__row" key={getStaffId(record) ?? `${currentPage}-${index}`}>
-                    <div className="staff-mini-table__identity">
-                      <span className="staff-mini-table__avatar">{getInitials(getDisplayName(record))}</span>
-                      <span className="staff-mini-table__name-wrap">
-                        <strong>{getDisplayName(record)}</strong>
-                        <small>{getFieldValue(record, ['designation'])}</small>
-                      </span>
-                    </div>
-                    <span className="staff-mini-table__role-pill">{getStaffRoleLabel(record)}</span>
-                    <span className="staff-mini-table__location">
-                      <strong>{getFieldValue(record, ['districtName', 'district', 'DistrictName'])}</strong>
-                      <small>
-                        {getFieldValue(record, ['blockName', 'block', 'BlockName']) !== '-'
-                          ? getFieldValue(record, ['blockName', 'block', 'BlockName'])
-                          : 'District level'}
-                      </small>
-                    </span>
-                    <span className="staff-mini-table__joined">
-                      <strong>{formatCreatedDate(record.createdDate ?? record.CreatedDate)}</strong>
-                      <small>ID {getFieldValue(record, ['livelihoodTrackerId'])}</small>
-                    </span>
-                    <span className={`staff-mini-table__status staff-mini-table__status--${getApprovalBucket(record)}`}>
-                      {getApprovalBucket(record)}
-                    </span>
-                    <button
-                      type="button"
-                      className="staff-mini-table__edit-btn"
-                      onClick={() => openEditModal(record)}
-                    >
-                      Edit
-                    </button>
-                  </div>
+                  <tr key={getStaffId(record) ?? `${currentPage}-${index}`}>
+                    <td><div className="users-directory__identity"><span className="users-directory__avatar">{getInitials(getDisplayName(record))}</span><span><strong>{getDisplayName(record)}</strong><small>{getFieldValue(record, ['designation'])} · ID {getFieldValue(record, ['livelihoodTrackerId'])}</small></span></div></td>
+                    <td><span className="users-directory__role">{getStaffRoleLabel(record)}</span></td>
+                    <td><span className="users-directory__contact">{getFieldValue(record, ['officialEmail', 'email'])}</span><small>{getFieldValue(record, ['contactNumber', 'mobile'])}</small></td>
+                    <td><strong>{getFieldValue(record, ['districtName', 'district', 'DistrictName'])}</strong><small>{getFieldValue(record, ['blockName', 'block', 'BlockName'])}</small></td>
+                    <td>{formatCreatedDate(record.createdDate ?? record.CreatedDate)}</td>
+                    <td><span className={`users-directory__status users-directory__status--${getApprovalBucket(record)}`}>{getApprovalBucket(record)}</span></td>
+                    <td><button className="users-directory__edit" type="button" onClick={() => openEditModal(record)} aria-label={`Edit ${getDisplayName(record)}`} title="Edit user"><Pencil size={15} /></button></td>
+                  </tr>
                 ))}
-              </div>
-              <div className="staff-pagination">
-                <p className="staff-pagination__summary">
-                  Showing {formatCount(pageStart)}-{formatCount(pageEnd)} of {formatCount(totalUsers)} users
-                </p>
-                <div className="staff-pagination__actions">
-                  <button
-                    type="button"
-                    className="staff-pagination__btn"
-                    onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
-                    disabled={currentPage === 1}
-                  >
-                    Previous
-                  </button>
-                  <span className="staff-pagination__page">
-                    Page {formatCount(currentPage)} of {formatCount(totalPages)}
-                  </span>
-                  <button
-                    type="button"
-                    className="staff-pagination__btn"
-                    onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
-                    disabled={currentPage === totalPages}
-                  >
-                    Next
-                  </button>
-                </div>
-              </div>
-            </>
-          )}
-        </article>
-      </section>
+                {paginatedUsers.length === 0 && <tr><td colSpan={7} className="users-directory__empty">{error ? 'Users could not be loaded.' : 'No users match these filters.'}</td></tr>}
+              </tbody>
+            </table>
+          </div>
+
+          <footer className="users-directory__pagination">
+            <span>Showing {formatCount(pageStart)}–{formatCount(pageEnd)} of {formatCount(filteredUsers.length)}</span>
+            <div><button type="button" aria-label="Previous page" onClick={() => setCurrentPage((page) => Math.max(1, page - 1))} disabled={currentPage === 1}><ChevronLeft size={17} /></button><span>{formatCount(currentPage)} / {formatCount(totalPages)}</span><button type="button" aria-label="Next page" onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))} disabled={currentPage === totalPages}><ChevronRight size={17} /></button></div>
+          </footer>
+        </section>
+      </main>
 
       {editingRecord && editForm && (
         <div className="staff-modal-backdrop" role="dialog" aria-modal="true" aria-label="Update user">

@@ -1,22 +1,19 @@
 import React from 'react'; // Sidebar with role-based navigation
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
-  BarChart3,
   ChevronLeft,
   ChevronRight,
   CloudSun,
   Factory,
-  HandCoins,
-  IndianRupee,
   LandPlot,
   LayoutDashboard,
   LogOut,
-  Map,
   ShieldCheck,
   Sprout,
   Tags,
   Activity,
   TrendingUp,
+  UploadCloud,
   UserCog,
   Users,
 } from 'lucide-react';
@@ -25,16 +22,9 @@ import { useAuth } from '../../context/AuthContext';
 import { getRoleLabel, getUserRoleId, isBlockStaff, isDistrictStaff, isStateAdmin } from '../../utils/roleAccess';
 
 const CRP_NAV_ITEMS = {
-  admin: [
-    { path: '/crp/list', label: 'CRP Management', icon: Map },
-  ],
-  district: [
-    { path: '/crp/list', label: 'CRP Management', icon: Map },
-  ],
   block: [
     { path: '/crp/approval', label: 'CRP Approval', icon: ShieldCheck },
     { path: '/crp/create', label: 'Create CRP', icon: Users },
-    { path: '/crp/list', label: 'CRP Management', icon: Map },
   ],
 } as const;
 
@@ -59,11 +49,7 @@ const Sidebar: React.FC = () => {
             { path: '/staff/approval', label: 'Staff Approval', icon: ShieldCheck },
             { path: '/staff/users', label: 'All Users', icon: Users },
             { path: '/staff/create-user', label: 'Create User', icon: Users },
-            ...CRP_NAV_ITEMS.admin,
             { path: '/analytics', label: 'Analytics', icon: TrendingUp },
-            { path: '/reports', label: 'Reports', icon: BarChart3 },
-            { path: '/financial-support', label: 'Financial Support', icon: HandCoins },
-            { path: '/income-profile', label: 'Income Profile', icon: IndianRupee },
           ],
         },
         {
@@ -73,10 +59,16 @@ const Sidebar: React.FC = () => {
             { path: '/master/roles', label: 'Roles', icon: ShieldCheck },
             { path: '/master/activities', label: 'Activities', icon: Activity },
             { path: '/master/seasons', label: 'Seasons', icon: CloudSun },
-            { path: '/master/shg-livelihood', label: 'SHG Livelihood', icon: Sprout },
+            { path: '/master/shg-upload', label: 'SHG Upload', icon: UploadCloud },
             { path: '/master/production', label: 'Production', icon: Factory },
             { path: '/master/crp-type', label: 'CRP Type', icon: UserCog },
             { path: '/master/land-type', label: 'Land Type', icon: LandPlot },
+          ],
+        },
+        {
+          label: 'Tracking',
+          items: [
+            { path: '/master/shg-livelihood', label: 'Report', icon: Sprout },
           ],
         },
       ];
@@ -87,13 +79,6 @@ const Sidebar: React.FC = () => {
         {
           label: 'Overview',
           items: [{ path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard }],
-        },
-        {
-          label: 'Management',
-          items: [
-            ...CRP_NAV_ITEMS.district,
-            { path: '/reports', label: 'Reports', icon: BarChart3 },
-          ],
         },
       ];
     }
@@ -108,7 +93,6 @@ const Sidebar: React.FC = () => {
           label: 'Operations',
           items: [
             ...CRP_NAV_ITEMS.block,
-            { path: '/reports', label: 'Reports', icon: BarChart3 },
           ],
         },
       ];
@@ -125,7 +109,6 @@ const Sidebar: React.FC = () => {
           { path: '/staff/approval', label: 'Staff Approval', icon: ShieldCheck },
           { path: '/staff/users', label: 'All Users', icon: Users },
           ...CRP_NAV_ITEMS.block,
-          { path: '/reports', label: 'Reports', icon: BarChart3 },
         ],
       },
     ];

@@ -29,9 +29,9 @@
   gap: 8px;
   padding: 8px 16px;
   border-radius: 50px;
-  background: rgba(39, 106, 152, 0.05);
-  border: 1px solid rgba(39, 106, 152, 0.15);
-  color: #276a98;
+  background: rgba(16, 64, 63, 0.05);
+  border: 1px solid rgba(16, 64, 63, 0.15);
+  color: #10403f;
   font-size: 0.9rem;
   font-weight: 600;
 }
@@ -46,31 +46,31 @@
   top: 50%;
   left: 12px;
   transform: translateY(-50%);
-  color: #7896ae;
+  color: #5a6b6e;
 }
 
 .role-search-input {
   width: 100%;
   padding: 10px 14px 10px 38px;
-  border: 1px solid rgba(118, 145, 170, 0.3);
+  border: 1px solid rgba(90, 107, 110, 0.3);
   border-radius: 12px;
   background: #fff;
-  color: #1d3953;
+  color: #17262a;
   font-size: 0.9rem;
   outline: none;
   transition: all 0.2s;
 }
 
 .role-search-input:focus {
-  border-color: #276a98;
-  box-shadow: 0 0 0 3px rgba(39, 106, 152, 0.1);
+  border-color: #10403f;
+  box-shadow: 0 0 0 3px rgba(16, 64, 63, 0.1);
 }
 
 .role-name-tag {
   display: inline-block;
   padding: 4px 10px;
-  background: rgba(39, 106, 152, 0.08);
-  color: #276a98;
+  background: rgba(16, 64, 63, 0.08);
+  color: #10403f;
   border-radius: 6px;
   font-weight: 700;
   font-size: 0.85rem;
@@ -105,22 +105,22 @@
 }
 
 .role-btn-edit {
-  background: rgba(39, 106, 152, 0.1);
-  color: #276a98;
+  background: rgba(16, 64, 63, 0.1);
+  color: #10403f;
 }
 
 .role-btn-edit:hover {
-  background: #276a98;
+  background: #10403f;
   color: #fff;
 }
 
 .role-btn-delete {
-  background: rgba(204, 52, 64, 0.08);
-  color: #cc3440;
+  background: rgba(165, 67, 47, 0.08);
+  color: #a5432f;
 }
 
 .role-btn-delete:hover {
-  background: #cc3440;
+  background: #a5432f;
   color: #fff;
 }
 
@@ -130,7 +130,7 @@
   align-items: center;
   gap: 8px;
   padding: 10px 20px;
-  background: linear-gradient(135deg, #276a98, #1a4e72);
+  background: linear-gradient(135deg, #10403f, #0b2d2c);
   color: #fff;
   border: none;
   border-radius: 12px;
@@ -142,14 +142,14 @@
 
 .role-btn-primary:hover {
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(39, 106, 152, 0.25);
+  box-shadow: 0 4px 12px rgba(16, 64, 63, 0.25);
 }
 
 .role-btn-secondary {
   padding: 10px 20px;
-  background: #f8fbfd;
+  background: #e5efec;
   color: #3a5a73;
-  border: 1px solid rgba(118, 145, 170, 0.3);
+  border: 1px solid rgba(90, 107, 110, 0.3);
   border-radius: 12px;
   font-weight: 600;
   cursor: pointer;
@@ -157,7 +157,7 @@
 
 .role-btn-danger {
   padding: 10px 20px;
-  background: #cc3440;
+  background: #a5432f;
   color: #fff;
   border: none;
   border-radius: 12px;
@@ -199,7 +199,7 @@
 
 .role-modal-header {
   padding: 20px 24px;
-  border-bottom: 1px solid rgba(39, 106, 152, 0.1);
+  border-bottom: 1px solid rgba(16, 64, 63, 0.1);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -208,13 +208,13 @@
 .role-modal-header h2 {
   margin: 0;
   font-size: 1.1rem;
-  color: #17324a;
+  color: #0b2d2c;
 }
 
 .role-modal-close {
   background: none;
   border: none;
-  color: #7896ae;
+  color: #5a6b6e;
   cursor: pointer;
 }
 
@@ -234,23 +234,23 @@
 .role-form-group label {
   font-weight: 700;
   font-size: 0.9rem;
-  color: #17324a;
+  color: #0b2d2c;
 }
 
 .role-input {
   padding: 12px;
-  border: 1px solid rgba(118, 145, 170, 0.3);
+  border: 1px solid rgba(90, 107, 110, 0.3);
   border-radius: 12px;
   font-size: 0.95rem;
   outline: none;
 }
 
 .role-input:focus {
-  border-color: #276a98;
+  border-color: #10403f;
 }
 
 .role-form-error {
-  color: #cc3440;
+  color: #a5432f;
   font-size: 0.85rem;
   margin: 0;
 }
@@ -270,7 +270,7 @@
   margin-bottom: 20px;
   font-weight: 600;
   font-size: 0.9rem;
-  border: 1px solid rgba(5, 150, 105, 0.2);
+  border: 1px solid rgba(63, 107, 74, 0.2);
 }
 
 .role-alert-close {

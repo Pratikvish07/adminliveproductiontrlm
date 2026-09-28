@@ -5,14 +5,14 @@
   align-items: end;
   padding: 1.25rem;
   margin-bottom: 1rem;
-  border: 1px solid #d7e1e9;
+  border: 1px solid #e2ddcf;
   background: linear-gradient(180deg, #ffffff, #f6fafc);
 }
 
 .excel-report-hero__kicker {
   display: inline-block;
   margin-bottom: 0.35rem;
-  color: #60788c;
+  color: #5a6b6e;
   font-size: 0.75rem;
   font-weight: 800;
   letter-spacing: 0.12em;
@@ -21,13 +21,13 @@
 
 .excel-report-hero h2 {
   margin: 0;
-  color: #17324a;
+  color: #0b2d2c;
   font-size: 1.6rem;
 }
 
 .excel-report-hero p {
   margin: 0.45rem 0 0;
-  color: #62798c;
+  color: #5a6b6e;
   line-height: 1.6;
 }
 
@@ -40,7 +40,7 @@
 .excel-report-hero__stats div {
   min-width: 110px;
   padding: 0.75rem 0.9rem;
-  border: 1px solid #d7e1e9;
+  border: 1px solid #e2ddcf;
   border-radius: 0.8rem;
   background: #fff;
 }
@@ -57,7 +57,7 @@
 .excel-report-hero__stats strong {
   display: block;
   margin-top: 0.35rem;
-  color: #17324a;
+  color: #0b2d2c;
   font-size: 1.35rem;
 }
 
@@ -72,7 +72,7 @@
   justify-content: center;
   min-height: 44px;
   padding: 0.75rem 1.1rem;
-  border: 1px solid #17324a;
+  border: 1px solid #0b2d2c;
   border-radius: 0.7rem;
   font-size: 0.92rem;
   font-weight: 700;
@@ -80,7 +80,7 @@
 }
 
 .excel-report-btn--primary {
-  background: #17324a;
+  background: #0b2d2c;
   color: #fff;
 }
 
@@ -91,7 +91,7 @@
 .excel-sheet-card {
   overflow: hidden;
   padding: 0;
-  border: 1px solid #cfd9e3;
+  border: 1px solid #e2ddcf;
 }
 
 .excel-sheet-card__bar {
@@ -100,8 +100,8 @@
   justify-content: space-between;
   gap: 1rem;
   padding: 0.9rem 1rem;
-  border-bottom: 1px solid #d7e1e9;
-  background: linear-gradient(180deg, #f8fbfd, #eef4f8);
+  border-bottom: 1px solid #e2ddcf;
+  background: linear-gradient(180deg, #e5efec, #eef4f8);
 }
 
 .excel-sheet-card__tabs {
@@ -113,10 +113,10 @@
 .excel-sheet-card__tabs button,
 .excel-sheet-card__tabs span {
   padding: 0.42rem 0.8rem;
-  border: 1px solid #cfd9e3;
+  border: 1px solid #e2ddcf;
   border-radius: 999px;
   background: #fff;
-  color: #62798c;
+  color: #5a6b6e;
   font-size: 0.8rem;
   font-weight: 700;
   font-family: inherit;
@@ -127,125 +127,21 @@
 }
 
 .excel-sheet-card__tabs button:hover {
-  border-color: #a9c7dc;
-  background: #f4f9fd;
+  border-color: #b9cfc9;
+  background: #e5efec;
 }
 
 .excel-sheet-card__tabs button.is-active,
 .excel-sheet-card__tabs span.is-active {
   border-color: #8eb6d2;
   background: #dcebf7;
-  color: #17324a;
+  color: #0b2d2c;
 }
 
 .excel-sheet-card__meta {
-  color: #60788c;
+  color: #5a6b6e;
   font-size: 0.8rem;
   font-weight: 700;
-}
-
-.excel-sheet-wrap {
-  overflow: auto;
-  background: #fff;
-}
-
-.excel-sheet {
-  width: max-content;
-  min-width: 100%;
-  border-collapse: collapse;
-  table-layout: fixed;
-  font-size: 0.87rem;
-}
-
-.excel-sheet th,
-.excel-sheet td {
-  border: 1px solid #d7e1e9;
-  padding: 0.65rem 0.75rem;
-  color: #264359;
-  background: #fff;
-  white-space: nowrap;
-}
-
-.excel-sheet__letters th {
-  position: sticky;
-  top: 0;
-  z-index: 3;
-  padding: 0.45rem 0.6rem;
-  background: #eef3f7;
-  color: #70879a;
-  font-size: 0.74rem;
-  font-weight: 800;
-  text-align: center;
-}
-
-.excel-sheet__headers th {
-  position: sticky;
-  top: 35px;
-  z-index: 2;
-  background: #dfeaf4;
-  color: #17324a;
-  font-size: 0.76rem;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  text-align: left;
-}
-
-.excel-sheet__row-index {
-  position: sticky;
-  left: 0;
-  z-index: 4;
-  width: 52px;
-  min-width: 52px;
-  max-width: 52px;
-  text-align: center;
-  background: #eef3f7 !important;
-  color: #6f8798;
-  font-weight: 800;
-}
-
-.excel-sheet tbody tr:nth-child(even) td {
-  background: #fbfdff;
-}
-
-.excel-sheet tbody td:nth-child(2),
-.excel-sheet tbody td:nth-child(3) {
-  font-weight: 700;
-}
-
-.excel-chip {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.28rem 0.6rem;
-  border-radius: 999px;
-  font-size: 0.78rem;
-  font-weight: 700;
-  border: 1px solid transparent;
-}
-
-.excel-chip--completed,
-.excel-chip--yes {
-  background: #dcfce7;
-  border-color: #bbf7d0;
-  color: #15803d;
-}
-
-.excel-chip--in-progress {
-  background: #dbeafe;
-  border-color: #bfdbfe;
-  color: #1d4ed8;
-}
-
-.excel-chip--under-review {
-  background: #fef3c7;
-  border-color: #fde68a;
-  color: #b45309;
-}
-
-.excel-chip--no {
-  background: #fee2e2;
-  border-color: #fecaca;
-  color: #b91c1c;
 }
 
 .excel-preview-btn {
@@ -257,152 +153,184 @@
   border: 1px solid #9dc0da;
   border-radius: 999px;
   background: #eff6ff;
-  color: #1d4ed8;
+  color: #2f6690;
   font-size: 0.78rem;
   font-weight: 700;
   cursor: pointer;
 }
 
 .excel-preview-btn:hover {
-  background: #dbeafe;
+  background: #e1ebf2;
 }
 
-/* ---------------------------------------------------------------- */
-/* Frozen (sticky) columns: Report ID, CRP ID, CRP Name             */
-/* Widths are fixed here so the `left` offsets stay predictable     */
-/* under `table-layout: fixed`. Row-index column occupies 0–52px.   */
-/* ---------------------------------------------------------------- */
+.report-crp-filter {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
 
-.excel-sheet__col-reportId,
-.excel-sheet__col-crpId,
-.excel-sheet__col-crpName {
-  position: sticky;
+.report-crp-filter label {
+  color: #0b2d2c;
+  font-weight: 700;
+  font-size: 0.88rem;
+}
+
+.report-crp-filter select {
+  padding: 0.55rem 0.8rem;
+  border: 1px solid #e2ddcf;
+  border-radius: 0.65rem;
   background: #fff;
+  color: #17262a;
+  font-size: 0.88rem;
+  min-width: 260px;
 }
 
-.excel-sheet__col-reportId {
-  left: 52px;
-  width: 130px;
-  min-width: 130px;
-  max-width: 130px;
-  z-index: 3;
+.report-crp-filter__hint {
+  color: #5a6b6e;
+  font-size: 0.8rem;
 }
 
-.excel-sheet__col-crpId {
-  left: 182px;
-  width: 110px;
-  min-width: 110px;
-  max-width: 110px;
-  z-index: 3;
+.report-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.9rem 1rem;
+  border-top: 1px solid #e2ddcf;
+  flex-wrap: wrap;
 }
 
-.excel-sheet__col-crpName {
-  left: 292px;
-  width: 170px;
-  min-width: 170px;
-  max-width: 170px;
-  z-index: 3;
-  box-shadow: 2px 0 4px rgba(23, 50, 74, 0.08);
+.report-pagination__info {
+  color: #5a6b6e;
+  font-size: 0.82rem;
 }
 
-/* Keep frozen header cells layered above the sticky top rows and
-   the frozen body cells beneath them. */
-.excel-sheet__letters th.excel-sheet__col-reportId,
-.excel-sheet__letters th.excel-sheet__col-crpId,
-.excel-sheet__letters th.excel-sheet__col-crpName {
-  z-index: 5;
-  background: #eef3f7;
+.report-pagination__controls {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
 }
 
-.excel-sheet__headers th.excel-sheet__col-reportId,
-.excel-sheet__headers th.excel-sheet__col-crpId,
-.excel-sheet__headers th.excel-sheet__col-crpName {
-  z-index: 4;
-  background: #dfeaf4;
+.report-pagination__controls button {
+  padding: 0.42rem 0.9rem;
+  border: 1px solid #e2ddcf;
+  border-radius: 0.6rem;
+  background: #fff;
+  color: #0b2d2c;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
 }
 
-/* Preserve the zebra striping on frozen body cells */
-.excel-sheet tbody tr:nth-child(even) td.excel-sheet__col-reportId,
-.excel-sheet tbody tr:nth-child(even) td.excel-sheet__col-crpId,
-.excel-sheet tbody tr:nth-child(even) td.excel-sheet__col-crpName {
-  background: #fbfdff;
+.report-pagination__controls button:hover:not(:disabled) {
+  border-color: #b9cfc9;
+  background: #e5efec;
 }
 
-.excel-preview-modal {
+.report-pagination__controls button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.report-pagination__page {
+  color: #0b2d2c;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.report-images-modal-backdrop {
   position: fixed;
   inset: 0;
   z-index: 1000;
   display: grid;
   place-items: center;
   padding: 1rem;
-}
-
-.excel-preview-modal__backdrop {
-  position: absolute;
-  inset: 0;
   background: rgba(10, 24, 36, 0.6);
 }
 
-.excel-preview-modal__panel {
-  position: relative;
-  z-index: 1;
-  width: min(960px, 100%);
+.report-images-modal {
+  width: min(680px, 100%);
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
   border-radius: 1rem;
   overflow: hidden;
-  border: 1px solid #cfd9e3;
+  border: 1px solid #e2ddcf;
   background: #fff;
   box-shadow: 0 20px 60px rgba(10, 24, 36, 0.28);
 }
 
-.excel-preview-modal__header {
+.report-images-modal__header {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 1rem;
   padding: 1rem 1.1rem;
-  border-bottom: 1px solid #d7e1e9;
-  background: #f7fafc;
+  border-bottom: 1px solid #e2ddcf;
+  background: #f6f4ee;
 }
 
-.excel-preview-modal__kicker {
-  display: inline-block;
-  margin-bottom: 0.2rem;
-  color: #60788c;
-  font-size: 0.74rem;
-  font-weight: 800;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-
-.excel-preview-modal__header h3 {
+.report-images-modal__header h3 {
   margin: 0;
-  color: #17324a;
-  font-size: 1.12rem;
+  color: #0b2d2c;
+  font-size: 1.05rem;
 }
 
-.excel-preview-modal__close {
-  min-height: 38px;
-  padding: 0.45rem 0.8rem;
-  border: 1px solid #c6d3de;
-  border-radius: 0.65rem;
-  background: #fff;
-  color: #28455d;
-  font-weight: 700;
+.report-images-modal__header button {
+  border: none;
+  background: none;
+  color: #5a6b6e;
   cursor: pointer;
 }
 
-.excel-preview-modal__body {
-  padding: 1rem;
-  background: #eef4f8;
+.report-images-modal__body {
+  padding: 1.1rem;
+  overflow-y: auto;
 }
 
-.excel-preview-modal__media {
+.report-images-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 0.9rem;
+}
+
+.report-images-grid__item {
+  display: block;
+  border-radius: 0.8rem;
+  overflow: hidden;
+  border: 1px solid #e2ddcf;
+  background: #e5efec;
+  text-decoration: none;
+}
+
+.report-images-grid__item img {
   display: block;
   width: 100%;
-  height: auto;
-  border-radius: 0.85rem;
-  border: 1px solid #d7e1e9;
-  background: #fff;
+  height: 110px;
+  object-fit: cover;
+  background: #eef3f7;
+}
+
+.report-images-grid__broken {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 110px;
+  background: #f1f5f9;
+  color: #94a3b8;
+  font-size: 0.76rem;
+  text-align: center;
+  padding: 0 0.5rem;
+}
+
+.report-images-grid__item span {
+  display: block;
+  padding: 0.4rem 0.5rem;
+  color: #5a6b6e;
+  font-size: 0.72rem;
+  text-align: center;
 }
 
 @media (max-width: 1024px) {
@@ -416,19 +344,676 @@
   }
 }
 
+/* Didi Profile modal — ported 1:1 from the trlm-demo-site reference design */
+.geo-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #2f6690;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.geo-link:hover {
+  color: #10403f;
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(11, 45, 44, 0.55);
+}
+
+.modal-card {
+  width: min(680px, 100%);
+  max-height: 90vh;
+  overflow-y: auto;
+  border-radius: 1.2rem;
+  background: #fff;
+  border: 1px solid #e2ddcf;
+  box-shadow: 0 30px 70px rgba(11, 45, 44, 0.32);
+}
+
+.modal-header {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.4rem 1.6rem;
+  background: linear-gradient(135deg, #0b2d2c 0%, #10403f 70%);
+  color: #fff;
+  border-radius: 1.2rem 1.2rem 0 0;
+}
+
+.modal-header__photo {
+  width: 64px;
+  height: 64px;
+  flex-shrink: 0;
+  border-radius: 999px;
+  object-fit: cover;
+  border: 3px solid rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.modal-header__avatar-fallback {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  flex-shrink: 0;
+  border-radius: 999px;
+  border: 3px solid rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  font-family: 'Fraunces', serif;
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
+.modal-header h3 {
+  margin: 0;
+  color: #fff;
+  font-size: 1.25rem;
+}
+
+.modal-header p {
+  margin: 0.25rem 0 0;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 0.86rem;
+}
+
+.modal-close {
+  position: absolute;
+  top: 1rem;
+  right: 1.1rem;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+  cursor: pointer;
+}
+
+.modal-close:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.modal-body {
+  padding: 1.5rem 1.6rem;
+}
+
+.modal-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.9rem;
+  margin-bottom: 1.3rem;
+}
+
+.modal-field {
+  padding: 0.75rem 0.9rem;
+  border-radius: 0.85rem;
+  background: #e5efec;
+  border: 1px solid #e2ddcf;
+}
+
+.modal-field.full {
+  grid-column: 1 / -1;
+}
+
+.mf-label {
+  display: block;
+  color: #5a6b6e;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.mf-value {
+  display: block;
+  margin-top: 0.3rem;
+  color: #0b2d2c;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.chip.green {
+  background: #e5efe3;
+  color: #3f6b4a;
+}
+
+.chip.red {
+  background: #f4e0da;
+  color: #a5432f;
+}
+
+.chip.grey {
+  background: #e2ddcf;
+  color: #5a6b6e;
+}
+
+.modal-media-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.3rem;
+}
+
+.modal-media-row > div span {
+  display: block;
+  margin-bottom: 0.4rem;
+  color: #5a6b6e;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.modal-media-row img,
+.modal-media-row video {
+  width: 100%;
+  max-height: 200px;
+  object-fit: cover;
+  border-radius: 0.85rem;
+  border: 1px solid #e2ddcf;
+  background: #f6f4ee;
+}
+
+.modal-media-empty {
+  display: grid;
+  place-items: center;
+  height: 140px;
+  border-radius: 0.85rem;
+  border: 1px dashed #e2ddcf;
+  background: #f6f4ee;
+  color: #5a6b6e;
+  font-size: 0.82rem;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.7rem;
+}
+
+.modal-actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.65rem 1.1rem;
+  border-radius: 0.85rem;
+  border: none;
+  font-weight: 700;
+  font-size: 0.86rem;
+  cursor: pointer;
+}
+
+.btn-print {
+  background: #e2ddcf;
+  color: #0b2d2c;
+}
+
+.btn-print:hover {
+  background: #d7d1bf;
+}
+
+.btn-map {
+  background: #10403f;
+  color: #fff;
+}
+
+.btn-map:hover {
+  background: #0b2d2c;
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .modal-overlay,
+  .modal-overlay * {
+    visibility: visible;
+  }
+  .modal-overlay {
+    position: absolute;
+    inset: 0;
+    background: #fff;
+  }
+  .modal-close,
+  .modal-actions {
+    display: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .modal-grid,
+  .modal-media-row {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 768px) {
   .excel-sheet-card__bar {
     flex-direction: column;
     align-items: flex-start;
   }
+}
 
-  .excel-sheet th,
-  .excel-sheet td {
-    padding: 0.58rem 0.65rem;
-    font-size: 0.82rem;
+.tracking-report {
+  display: grid;
+  gap: 0.85rem;
+  color: #213832;
+}
+
+.tracking-report__toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  padding: 0.8rem;
+  border: 1px solid #dce5e1;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.tracking-report__toolbar > label {
+  color: #45615a;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.tracking-report__search {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: min(280px, 100%);
+  min-height: 38px;
+  padding: 0 0.65rem;
+  border: 1px solid #cddbd5;
+  border-radius: 6px;
+  color: #60766e;
+}
+
+.tracking-report__search input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #213832;
+}
+
+.tracking-report__button,
+.tracking-report__icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: 38px;
+  padding: 0 0.75rem;
+  border: 1px solid #cddbd5;
+  border-radius: 6px;
+  background: #fff;
+  color: #24463b;
+  font-size: 0.82rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.tracking-report__button:hover:not(:disabled),
+.tracking-report__icon-button:hover:not(:disabled) {
+  background: #edf5f1;
+  border-color: #a9c5b8;
+}
+
+.tracking-report__button--primary {
+  border-color: #185448;
+  background: #185448;
+  color: #fff;
+}
+
+.tracking-report__button--primary:hover:not(:disabled) {
+  background: #103b39;
+  color: #fff;
+}
+
+.tracking-report__button:disabled,
+.tracking-report__icon-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.tracking-report__icon-button {
+  width: 38px;
+  padding: 0;
+}
+
+.tracking-report__count {
+  margin-left: auto;
+  color: #61766e;
+  font-size: 0.8rem;
+  font-weight: 650;
+}
+
+.tracking-report__spinning {
+  animation: tracking-report-spin 1s linear infinite;
+}
+
+@keyframes tracking-report-spin {
+  to { transform: rotate(360deg); }
+}
+
+.tracking-report__progress {
+  padding: 0.55rem 0.75rem;
+  border-radius: 6px;
+  background: #edf5f1;
+  color: #31594b;
+  font-size: 0.8rem;
+}
+
+.tracking-report__error,
+.tracking-report__empty {
+  padding: 1rem;
+  border: 1px solid #efd0c7;
+  border-radius: 8px;
+  background: #fff7f4;
+  color: #91412e;
+}
+
+.tracking-report__loading {
+  display: grid;
+  min-height: 180px;
+  place-items: center;
+}
+
+.tracking-report__list {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.tracking-report__record {
+  overflow: hidden;
+  border: 1px solid #dce5e1;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.tracking-report__record-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.1rem;
+  border-bottom: 1px solid #dce5e1;
+  background: #eaf2ee;
+}
+
+.tracking-report__record-head > div:first-child > p {
+  margin: 0 0 0.25rem;
+  color: #547168;
+  font-size: 0.68rem;
+  font-weight: 750;
+}
+
+.tracking-report__record-head h2 {
+  margin: 0;
+  color: #123e38;
+  font-size: 1.08rem;
+  line-height: 1.3;
+}
+
+.tracking-report__record-head > div:first-child > span {
+  display: inline-block;
+  margin-top: 0.2rem;
+  color: #536d65;
+  font-size: 0.82rem;
+}
+
+.tracking-report__record-id {
+  display: grid;
+  justify-items: end;
+  gap: 0.08rem;
+  flex: 0 0 auto;
+}
+
+.tracking-report__record-id span,
+.tracking-report__record-id small {
+  color: #60766e;
+  font-size: 0.7rem;
+}
+
+.tracking-report__record-id strong {
+  color: #123e38;
+  font-size: 0.9rem;
+}
+
+.tracking-report__record-body {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+  padding: 0.8rem;
+}
+
+.tracking-report__group {
+  min-width: 0;
+  padding: 0.75rem;
+  border: 1px solid #e2eae6;
+  border-radius: 6px;
+  background: #fff;
+}
+
+.tracking-report__group h3 {
+  margin: 0 0 0.65rem;
+  color: #31594b;
+  font-size: 0.76rem;
+  font-weight: 750;
+}
+
+.tracking-report__fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem 0.8rem;
+}
+
+.tracking-report__field {
+  min-width: 0;
+}
+
+.tracking-report__field--wide {
+  grid-column: 1 / -1;
+}
+
+.tracking-report__field > span,
+.tracking-report__field > strong {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.tracking-report__field > span {
+  color: #75857f;
+  font-size: 0.68rem;
+}
+
+.tracking-report__field > strong {
+  margin-top: 0.14rem;
+  color: #263d37;
+  font-size: 0.8rem;
+  font-weight: 620;
+}
+
+.tracking-report__map-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: #286b58;
+}
+
+.tracking-report__statuses {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  grid-column: 1 / -1;
+}
+
+.tracking-report__status {
+  display: inline-grid;
+  gap: 0.1rem;
+  padding: 0.38rem 0.55rem;
+  border-radius: 5px;
+  background: #f1f4f2;
+  color: #5c6d66;
+}
+
+.tracking-report__status--good {
+  background: #e7f3ec;
+  color: #286248;
+}
+
+.tracking-report__status > span {
+  font-size: 0.62rem;
+}
+
+.tracking-report__status > strong {
+  font-size: 0.72rem;
+}
+
+.tracking-report__media {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+
+.tracking-report__media-item,
+.tracking-report__media-empty {
+  display: grid;
+  align-content: start;
+  gap: 0.35rem;
+  min-width: 0;
+  color: #45615a;
+  font-size: 0.72rem;
+}
+
+.tracking-report__media-item img,
+.tracking-report__media-item video {
+  display: block;
+  width: 100%;
+  height: 135px;
+  border: 1px solid #dce5e1;
+  border-radius: 5px;
+  background: #f3f6f4;
+  object-fit: cover;
+}
+
+.tracking-report__media-item code {
+  color: #64766f;
+  font-size: 0.64rem;
+  overflow-wrap: anywhere;
+}
+
+.tracking-report__media-empty {
+  min-height: 100px;
+  place-items: center;
+  border: 1px dashed #dce5e1;
+  border-radius: 5px;
+  color: #7a8984;
+}
+
+.tracking-report__pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  padding: 0.65rem 0;
+  color: #60766e;
+  font-size: 0.8rem;
+}
+
+.tracking-report__pagination > div {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.tracking-report__pagination button {
+  min-height: 34px;
+  padding: 0 0.7rem;
+  border: 1px solid #cddbd5;
+  border-radius: 6px;
+  background: #fff;
+  color: #24463b;
+  cursor: pointer;
+}
+
+.tracking-report__pagination button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.tracking-report__pagination strong {
+  color: #31594b;
+}
+
+@media (max-width: 760px) {
+  .tracking-report__record-body {
+    grid-template-columns: 1fr;
   }
 
-  .excel-preview-modal__header {
+  .tracking-report__toolbar {
+    align-items: stretch;
+  }
+
+  .tracking-report__toolbar > label {
+    width: 100%;
+  }
+
+  .tracking-report__search {
+    flex: 1 1 180px;
+  }
+
+  .tracking-report__count {
+    width: 100%;
+    margin-left: 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .tracking-report__record-head {
+    align-items: flex-start;
+  }
+
+  .tracking-report__record-id {
+    max-width: 92px;
+  }
+
+  .tracking-report__record-id small {
+    text-align: right;
+  }
+
+  .tracking-report__fields,
+  .tracking-report__media {
+    grid-template-columns: 1fr;
+  }
+
+  .tracking-report__pagination {
+    align-items: flex-start;
     flex-direction: column;
   }
 }

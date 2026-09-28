@@ -1,5 +1,6 @@
 import type { CRPRecord } from '../../services/crpService';
 import type { PendingCRPRecord } from '../../services/crpService';
+import { getDistricts, getBlocks, getGramPanchayats, getVillages } from '../../services/masterService';
 
 export type CRPRecordProcessed = Record<string, string | number | undefined>;
 
@@ -260,4 +261,117 @@ export function formatCRPValue(value: any): string {
   if (typeof value === 'boolean') return value ? 'Yes' : 'No';
   return String(value);
 }
+
+// ---------------------------------------------------------------------------
+// District / Block / Gram Panchayat / Village lookup
+// ---------------------------------------------------------------------------
+// A CRP registration record only carries blockId + villageId (no districtId,
+// no gramPanchayatId). The master API has no "list all villages"/"list all
+// GPs" endpoint either — villages are only listable per Gram Panchayat
+// (GET /master/village/{gpId}) and GPs only per block (GET /master/gp/{blockId}).
+// So resolving a villageId to a name (and to its Gram Panchayat) means
+// walking block -> GP -> village for every block actually referenced by the
+// records being enriched.
+
+export const toIdString = (value: unknown): string => {
+  if (value === null || value === undefined || value === '') return '';
+  return String(value).trim();
+};
+
+export type LocationLookup = {
+  districtNameMap: Map<string, string>;
+  blockDetailMap: Map<string, { blockName: string; districtId: string }>;
+};
+
+/**
+ * Builds districtId → districtName and blockId → { blockName, districtId }
+ * lookups so any record carrying blockId can be resolved to a district/block name.
+ */
+export const buildLocationLookup = async (): Promise<LocationLookup> => {
+  const districts = await getDistricts().catch(() => []);
+
+  const districtNameMap = new Map<string, string>(
+    districts.map((d) => [String(d.districtId ?? ''), String(d.districtName ?? '')]),
+  );
+
+  const blockDetailMap = new Map<string, { blockName: string; districtId: string }>();
+
+  await Promise.all(
+    districts.map(async (d) => {
+      const districtId = String(d.districtId ?? '');
+      if (!districtId) return;
+
+      const blocks = await getBlocks(districtId).catch(() => []);
+      blocks.forEach((block) => {
+        const blockId = String(block.blockId ?? '');
+        if (blockId) {
+          blockDetailMap.set(blockId, {
+            blockName: String(block.blockName ?? ''),
+            districtId,
+          });
+        }
+      });
+    }),
+  );
+
+  return { districtNameMap, blockDetailMap };
+};
+
+export type VillageGpLookup = Map<string, { villageName: string; gpName: string }>;
+
+/**
+ * Resolves villageId → { villageName, gpName } by walking block -> GP -> village,
+ * scoped to only the given block ids (villages/GPs cannot be listed in bulk).
+ */
+export const buildVillageGpLookup = async (blockIds: string[]): Promise<VillageGpLookup> => {
+  const map: VillageGpLookup = new Map();
+  const uniqueBlockIds = Array.from(new Set(blockIds.filter(Boolean)));
+
+  await Promise.all(
+    uniqueBlockIds.map(async (blockId) => {
+      const gramPanchayats = await getGramPanchayats(blockId).catch(() => []);
+
+      await Promise.all(
+        gramPanchayats.map(async (gp) => {
+          const gpName = String(gp.GPName ?? '');
+          const villages = await getVillages(gp.GPId).catch(() => []);
+
+          villages.forEach((village) => {
+            const villageId = String(village.VillageId ?? '');
+            if (villageId) {
+              map.set(villageId, { villageName: String(village.VillageName ?? ''), gpName });
+            }
+          });
+        }),
+      );
+    }),
+  );
+
+  return map;
+};
+
+/**
+ * Resolves district/block/gramPanchayat/village names for a raw record
+ * carrying blockId/villageId (e.g. a CRP registration), using lookups built
+ * by `buildLocationLookup` and `buildVillageGpLookup`.
+ */
+export const resolveLocationForRecord = (
+  raw: Record<string, unknown>,
+  lookup: LocationLookup,
+  villageGpLookup: VillageGpLookup,
+): { district: string; block: string; gramPanchayat: string; village: string } => {
+  const blockId = toIdString(raw['blockId'] ?? raw['BlockId'] ?? raw['block_id'] ?? '');
+  const blockDetail = lookup.blockDetailMap.get(blockId);
+  const districtId = blockDetail?.districtId ?? '';
+
+  const villageId = toIdString(raw['villageId'] ?? raw['VillageId'] ?? raw['village_id'] ?? '');
+  const villageInfo = villageGpLookup.get(villageId);
+
+  return {
+    district: (districtId ? lookup.districtNameMap.get(districtId) : undefined) || 'N/A',
+    block: blockDetail?.blockName || 'N/A',
+    gramPanchayat: villageInfo?.gpName || 'N/A',
+    village: villageInfo?.villageName || 'N/A',
+  };
+};
 
