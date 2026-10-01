@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { QRCodeSVG } from 'qrcode.react';
 import Input from '../../components/common/Input';
 import Button from '../../components/common/Button';
 import { authService } from '../../services/authService';
@@ -48,6 +49,8 @@ const extractAuthToken = (response: any): string => {
 
   return typeof token === 'string' ? token.trim() : '';
 };
+
+const APK_URL = 'https://livelihood-trlm.in/LiveLivelihoodTracker.apk';
 
 /* ── Stats shown on the left panel ── */
 const STATS = [
@@ -194,6 +197,24 @@ const Login: React.FC = () => {
               <span className="vbl-sub">ত্রিপুরা গ্রামীণ জীবিকা মিশন</span>
             </div>
           </div>
+
+          {/* Mobile app download QR */}
+          <a
+            className="visual-qr"
+            href={APK_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Download the Livelihood Tracker Android app"
+          >
+            <div className="visual-qr-code">
+              <QRCodeSVG value={APK_URL} size={132} level="M" marginSize={0} />
+            </div>
+            <div className="visual-qr-text">
+              <span className="vqr-title">Get the Mobile App</span>
+              <span className="vqr-sub">Scan to download the Livelihood Tracker APK for Android</span>
+              <span className="vqr-link">Download APK ↓</span>
+            </div>
+          </a>
 
           {/* Bottom: stats row */}
           <div className="visual-stats">
